@@ -1,6 +1,6 @@
 # finnhub-dashboard
 
-A stock financial dashboard SPA. FastAPI backend + React frontend (coming soon).
+A stock financial dashboard SPA. FastAPI backend + React frontend.
 
 ## Backend
 
@@ -47,6 +47,53 @@ venv/bin/pytest tests/ -v
 
 ```bash
 fuser -k 8000/tcp
+```
+
+---
+
+## Frontend
+
+### Setup
+
+```bash
+cd frontend
+npm install
+```
+
+### Run
+
+```bash
+cd frontend
+npm run dev
+```
+
+App: `http://localhost:5173`
+
+> The backend must also be running on port 8000 for API calls to work.
+
+### Tests
+
+```bash
+cd frontend
+npm test
+```
+
+36 tests across six files — no backend connection required:
+
+| File | What it tests |
+|------|--------------|
+| `src/test/SearchBar.test.jsx` | Submit uppercases and trims input, blank input guard, custom placeholder |
+| `src/test/QuoteCard.test.jsx` | Symbol display, `$` prefix and two decimals, null fields show `—` |
+| `src/test/MetricsGroup.test.jsx` | Dollar/percent/percent_decimal formatting, series `asOf` date, null filtering |
+| `src/test/ReportedFinancials.test.jsx` | Section titles, B/M number suffixes, empty sections skipped |
+| `src/test/CompareSearchBar.test.jsx` | Uppercase and clear on add, disabled at max, blank input guard |
+| `src/test/CompareTable.test.jsx` | Formatting, loading/error states, remove button, ascending/descending sort |
+
+To run in watch mode during development:
+
+```bash
+cd frontend
+npm run test:watch
 ```
 
 ---

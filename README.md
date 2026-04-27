@@ -8,12 +8,16 @@ A stock financial dashboard SPA. FastAPI backend + React frontend.
 
 ### Prerequisites
 
-Ensure `backend/.env` exists with your Finnhub API key:
+Ensure `backend/.env` exists with your Finnhub API key and auth credentials:
 
 ```
 FINNHUB_API_KEY=your_api_key_here
 REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+APP_PASSWORD=choose_a_strong_password
+JWT_SECRET=a_long_random_string
 ```
+
+`APP_PASSWORD` is the password users enter on the login page. `JWT_SECRET` is used to sign session tokens — set it to a long random string and keep it secret.
 
 ### Build and run
 
@@ -51,11 +55,13 @@ python3 -m venv venv
 venv/bin/pip install -r requirements-dev.txt
 ```
 
-Add your Finnhub API key to `.env`:
+Add your Finnhub API key and auth credentials to `.env`:
 
 ```
 FINNHUB_API_KEY=your_api_key_here
 REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+APP_PASSWORD=choose_a_strong_password
+JWT_SECRET=a_long_random_string
 ```
 
 #### Run
@@ -74,12 +80,13 @@ cd backend
 venv/bin/pytest tests/ -v
 ```
 
-19 tests across three files — no real Finnhub API calls are made:
+25 tests across four files — no real Finnhub API calls are made:
 
 | File | What it tests |
 |------|--------------|
-| `tests/test_quote.py` | `GET /api/quote/{symbol}` — happy path, 404, 502 |
-| `tests/test_financials.py` | `GET /api/financials/{symbol}` — shape, groups, 404, 502 |
+| `tests/test_auth.py` | Login endpoint, wrong password, missing/expired token |
+| `tests/test_quote.py` | `GET /api/quote/{symbol}` — happy path, 404, 502, 403 without token |
+| `tests/test_financials.py` | `GET /api/financials/{symbol}` — shape, groups, 404, 502, 403 without token |
 | `tests/test_finnhub_service.py` | Service functions and TTL cache behaviour |
 
 #### Kill a stale process on port 8000
@@ -117,10 +124,11 @@ cd frontend
 npm test
 ```
 
-54 tests across six files — no backend connection required:
+58 tests across seven files — no backend connection required:
 
 | File | What it tests |
 |------|--------------|
+| `src/test/LoginPage.test.jsx` | Password field render, wrong password error, successful login, token persisted |
 | `src/test/SearchBar.test.jsx` | Submit uppercases and trims input, blank input guard, custom placeholder |
 | `src/test/QuoteCard.test.jsx` | Symbol display, `$` prefix and two decimals, null fields show `—` |
 | `src/test/MetricsGroup.test.jsx` | Dollar/percent/percent_decimal formatting, series `asOf` date, null filtering |
@@ -138,6 +146,24 @@ npm run test:watch
 ---
 
 ## API Reference
+
+### `POST /api/auth/login`
+
+Authenticates with the shared password and returns a JWT valid for 24 hours.
+
+```bash
+curl -X POST http://localhost:8000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"password": "your_password"}'
+```
+
+```json
+{ "access_token": "<jwt>", "token_type": "bearer" }
+```
+
+All other API endpoints require `Authorization: Bearer <token>`.
+
+---
 
 ### `GET /api/quote/{symbol}`
 
@@ -214,5 +240,7 @@ curl http://localhost:8000/api/financials/AAPL
 
 | Status | Meaning |
 |--------|---------|
+| 401 | Wrong password or expired token |
+| 403 | No token provided |
 | 404 | Symbol not found or no data available |
 | 502 | Upstream Finnhub API error |

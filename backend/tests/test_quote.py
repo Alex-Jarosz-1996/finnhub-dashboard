@@ -3,10 +3,10 @@ from fastapi.testclient import TestClient
 from tests.conftest import MOCK_QUOTE
 
 
-def test_quote_returns_200_with_correct_shape(client: TestClient, mocker):
+def test_quote_returns_200_with_correct_shape(client: TestClient, auth_headers, mocker):
     mocker.patch("finnhub_service.get_quote", return_value=MOCK_QUOTE)
 
-    response = client.get("/api/quote/AAPL")
+    response = client.get("/api/quote/AAPL", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -17,38 +17,46 @@ def test_quote_returns_200_with_correct_shape(client: TestClient, mocker):
     assert data["open"] == 188.00
 
 
-def test_quote_symbol_is_uppercased(client: TestClient, mocker):
+def test_quote_symbol_is_uppercased(client: TestClient, auth_headers, mocker):
     mocker.patch("finnhub_service.get_quote", return_value=MOCK_QUOTE)
 
-    response = client.get("/api/quote/aapl")
+    response = client.get("/api/quote/aapl", headers=auth_headers)
 
     assert response.status_code == 200
     assert response.json()["symbol"] == "AAPL"
 
 
-def test_quote_returns_404_for_unknown_symbol(client: TestClient, mocker):
+def test_quote_returns_404_for_unknown_symbol(client: TestClient, auth_headers, mocker):
     mocker.patch(
         "finnhub_service.get_quote", return_value={"c": 0, "h": 0, "l": 0, "o": 0}
     )
 
-    response = client.get("/api/quote/ZZZZZ")
+    response = client.get("/api/quote/ZZZZZ", headers=auth_headers)
 
     assert response.status_code == 404
     assert "ZZZZZ" in response.json()["detail"]
 
 
-def test_quote_returns_404_when_no_data(client: TestClient, mocker):
+def test_quote_returns_404_when_no_data(client: TestClient, auth_headers, mocker):
     mocker.patch("finnhub_service.get_quote", return_value={})
 
-    response = client.get("/api/quote/AAPL")
+    response = client.get("/api/quote/AAPL", headers=auth_headers)
 
     assert response.status_code == 404
 
 
-def test_quote_returns_502_on_finnhub_error(client: TestClient, mocker):
+def test_quote_returns_502_on_finnhub_error(client: TestClient, auth_headers, mocker):
     mocker.patch("finnhub_service.get_quote", side_effect=Exception("API unavailable"))
 
-    response = client.get("/api/quote/AAPL")
+    response = client.get("/api/quote/AAPL", headers=auth_headers)
 
     assert response.status_code == 502
     assert "Finnhub error" in response.json()["detail"]
+
+
+def test_quote_returns_403_without_token(client: TestClient, mocker):
+    mocker.patch("finnhub_service.get_quote", return_value=MOCK_QUOTE)
+
+    response = client.get("/api/quote/AAPL")
+
+    assert response.status_code == 403

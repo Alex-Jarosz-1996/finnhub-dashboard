@@ -18,6 +18,12 @@
   color: var(--text-primary);
 }
 
+.headerActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .themeBtn {
   padding: 6px 14px;
   background: var(--bg-card);
@@ -27,6 +33,22 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
+}
+
+.logoutBtn {
+  padding: 6px 14px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.logoutBtn:hover {
+  color: var(--error-text);
+  border-color: var(--error-border);
 }
 
 .tabs {

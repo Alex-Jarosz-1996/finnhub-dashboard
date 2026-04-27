@@ -1,13 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 import finnhub_service
+from dependencies import get_current_user
 from models.quote import QuoteResponse
 
 router = APIRouter(prefix="/api")
 
 
 @router.get("/quote/{symbol}", response_model=QuoteResponse)
-def get_quote(symbol: str):
+def get_quote(symbol: str, _=Depends(get_current_user)):
     try:
         data = finnhub_service.get_quote(symbol)
     except Exception as e:

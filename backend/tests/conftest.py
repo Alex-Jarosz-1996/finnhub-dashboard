@@ -1,8 +1,12 @@
 import os
+from datetime import datetime, timedelta, timezone
 
 # Must be set before main/finnhub_service are imported
 os.environ.setdefault("FINNHUB_API_KEY", "test_key")
+os.environ.setdefault("JWT_SECRET", "test_jwt_secret")
+os.environ.setdefault("APP_PASSWORD", "test_password")
 
+import jwt
 import pytest
 from fastapi.testclient import TestClient
 
@@ -12,6 +16,13 @@ from main import app
 @pytest.fixture
 def client() -> TestClient:
     return TestClient(app)
+
+
+@pytest.fixture
+def auth_headers():
+    payload = {"exp": datetime.now(timezone.utc) + timedelta(hours=1)}
+    token = jwt.encode(payload, os.environ["JWT_SECRET"], algorithm="HS256")
+    return {"Authorization": f"Bearer {token}"}
 
 
 # --- Shared mock payloads ---

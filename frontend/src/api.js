@@ -8,11 +8,21 @@ const handle = async (res) => {
   return res.json()
 }
 
-export const fetchQuote = (symbol) =>
-  fetch(`${BASE}/quote/${symbol.toUpperCase()}`).then(handle)
+const authHeaders = (token) =>
+  token ? { Authorization: `Bearer ${token}` } : {}
 
-export const fetchFinancials = (symbol) =>
-  fetch(`${BASE}/financials/${symbol.toUpperCase()}`).then(handle)
+export const login = (password) =>
+  fetch(`${BASE}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password }),
+  }).then(handle)
 
-export const fetchAll = (symbol) =>
-  Promise.all([fetchQuote(symbol), fetchFinancials(symbol)])
+export const fetchQuote = (symbol, token) =>
+  fetch(`${BASE}/quote/${symbol.toUpperCase()}`, { headers: authHeaders(token) }).then(handle)
+
+export const fetchFinancials = (symbol, token) =>
+  fetch(`${BASE}/financials/${symbol.toUpperCase()}`, { headers: authHeaders(token) }).then(handle)
+
+export const fetchAll = (symbol, token) =>
+  Promise.all([fetchQuote(symbol, token), fetchFinancials(symbol, token)])

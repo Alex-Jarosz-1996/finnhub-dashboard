@@ -12,10 +12,12 @@ def _mock_financials(mocker):
     )
 
 
-def test_financials_returns_200_with_correct_shape(client: TestClient, mocker):
+def test_financials_returns_200_with_correct_shape(
+    client: TestClient, auth_headers, mocker
+):
     _mock_financials(mocker)
 
-    response = client.get("/api/financials/AAPL")
+    response = client.get("/api/financials/AAPL", headers=auth_headers)
 
     assert response.status_code == 200
     data = response.json()
@@ -24,19 +26,21 @@ def test_financials_returns_200_with_correct_shape(client: TestClient, mocker):
     assert "reported" in data
 
 
-def test_financials_symbol_is_uppercased(client: TestClient, mocker):
+def test_financials_symbol_is_uppercased(client: TestClient, auth_headers, mocker):
     _mock_financials(mocker)
 
-    response = client.get("/api/financials/aapl")
+    response = client.get("/api/financials/aapl", headers=auth_headers)
 
     assert response.status_code == 200
     assert response.json()["symbol"] == "AAPL"
 
 
-def test_financials_metrics_contain_all_groups(client: TestClient, mocker):
+def test_financials_metrics_contain_all_groups(
+    client: TestClient, auth_headers, mocker
+):
     _mock_financials(mocker)
 
-    response = client.get("/api/financials/AAPL")
+    response = client.get("/api/financials/AAPL", headers=auth_headers)
     metrics = response.json()["metrics"]
 
     for group in (
@@ -52,20 +56,24 @@ def test_financials_metrics_contain_all_groups(client: TestClient, mocker):
         assert group in metrics, f"Missing metrics group: {group}"
 
 
-def test_financials_series_fields_include_as_of_date(client: TestClient, mocker):
+def test_financials_series_fields_include_as_of_date(
+    client: TestClient, auth_headers, mocker
+):
     _mock_financials(mocker)
 
-    response = client.get("/api/financials/AAPL")
+    response = client.get("/api/financials/AAPL", headers=auth_headers)
     pe = response.json()["metrics"]["valuation"]["peTTM"]
 
     assert pe["value"] == 28.4
     assert pe["asOf"] == "2024-09-28"
 
 
-def test_financials_reported_contains_all_statements(client: TestClient, mocker):
+def test_financials_reported_contains_all_statements(
+    client: TestClient, auth_headers, mocker
+):
     _mock_financials(mocker)
 
-    response = client.get("/api/financials/AAPL")
+    response = client.get("/api/financials/AAPL", headers=auth_headers)
     reported = response.json()["reported"]
 
     assert "balanceSheet" in reported
@@ -74,25 +82,37 @@ def test_financials_reported_contains_all_statements(client: TestClient, mocker)
     assert reported["balanceSheet"][0]["label"] == "Total Assets"
 
 
-def test_financials_returns_404_when_all_metrics_none(client: TestClient, mocker):
+def test_financials_returns_404_when_all_metrics_none(
+    client: TestClient, auth_headers, mocker
+):
     mocker.patch(
         "finnhub_service.get_basic_financials",
         return_value={"metric": {}, "series": {"quarterly": {}}},
     )
     mocker.patch("finnhub_service.get_financials_reported", return_value={"data": []})
 
-    response = client.get("/api/financials/ZZZZZ")
+    response = client.get("/api/financials/ZZZZZ", headers=auth_headers)
 
     assert response.status_code == 404
     assert "ZZZZZ" in response.json()["detail"]
 
 
-def test_financials_returns_502_on_finnhub_error(client: TestClient, mocker):
+def test_financials_returns_502_on_finnhub_error(
+    client: TestClient, auth_headers, mocker
+):
     mocker.patch(
         "finnhub_service.get_basic_financials", side_effect=Exception("API unavailable")
     )
 
-    response = client.get("/api/financials/AAPL")
+    response = client.get("/api/financials/AAPL", headers=auth_headers)
 
     assert response.status_code == 502
     assert "Finnhub error" in response.json()["detail"]
+
+
+def test_financials_returns_403_without_token(client: TestClient, mocker):
+    _mock_financials(mocker)
+
+    response = client.get("/api/financials/AAPL")
+
+    assert response.status_code == 403

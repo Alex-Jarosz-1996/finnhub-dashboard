@@ -1,0 +1,65 @@
+.backdrop {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-app);
+}
+
+.card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 2rem 2.5rem;
+  width: 100%;
+  max-width: 360px;
+}
+
+.title {
+  margin: 0 0 1.5rem;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  text-align: center;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.input {
+  padding: 0.5rem 0.75rem;
+  background-color: var(--bg-app);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.button {
+  padding: 0.5rem;
+  background-color: var(--btn-primary);
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.button:disabled {
+  background-color: var(--btn-disabled);
+  cursor: not-allowed;
+}
+
+.error {
+  margin: 0.75rem 0 0;
+  color: var(--error-text);
+  font-size: 0.875rem;
+  text-align: center;
+}

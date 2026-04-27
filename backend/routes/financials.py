@@ -1,13 +1,14 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 import finnhub_service
+from dependencies import get_current_user
 from models.financials import FinancialsResponse
 
 router = APIRouter(prefix="/api")
 
 
 @router.get("/financials/{symbol}", response_model=FinancialsResponse)
-def get_financials(symbol: str):
+def get_financials(symbol: str, _=Depends(get_current_user)):
     try:
         metrics = finnhub_service.build_metrics(symbol)
         reported = finnhub_service.build_reported(symbol)

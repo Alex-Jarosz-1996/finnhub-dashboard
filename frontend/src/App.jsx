@@ -7,9 +7,11 @@ import MetricsGroup from './components/SingleView/MetricsGroup.jsx'
 import ReportedFinancials from './components/SingleView/ReportedFinancials.jsx'
 import CompareSearchBar from './components/CompareView/CompareSearchBar.jsx'
 import CompareTable from './components/CompareView/CompareTable.jsx'
+import LoginPage from './pages/LoginPage.jsx'
 
 const STORAGE_KEY = 'finnhub_compare_tickers'
 const THEME_KEY = 'finnhub_theme'
+const TOKEN_KEY = 'finnhub_token'
 const MAX_COMPARE = 10
 
 const GROUP_LABELS = {
@@ -39,6 +41,20 @@ export default function App() {
     localStorage.setItem(THEME_KEY, next ? 'dark' : 'light')
   }
 
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
+
+  const handleLogin = (t) => setToken(t)
+
+  const handleLogout = () => {
+    localStorage.removeItem(TOKEN_KEY)
+    setToken(null)
+  }
+
+  const handle401 = () => {
+    localStorage.removeItem(TOKEN_KEY)
+    setToken(null)
+  }
+
   const [tab, setTab] = useState('single')
 
   const [singleLoading, setSingleLoading] = useState(false)
@@ -57,9 +73,11 @@ export default function App() {
   }, [compareTickers])
 
   useEffect(() => {
-    compareTickers.forEach((sym) => {
-      if (!compareData[sym]) loadCompareTicker(sym)
-    })
+    if (token) {
+      compareTickers.forEach((sym) => {
+        if (!compareData[sym]) loadCompareTicker(sym)
+      })
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSingleSearch = async (symbol) => {
@@ -68,10 +86,11 @@ export default function App() {
     setQuote(null)
     setFinancials(null)
     try {
-      const [q, f] = await fetchAll(symbol)
+      const [q, f] = await fetchAll(symbol, token)
       setQuote(q)
       setFinancials(f)
     } catch (e) {
+      if (e.message === 'Unauthorized' || e.message.includes('401')) { handle401(); return }
       setSingleError(e.message)
     } finally {
       setSingleLoading(false)
@@ -81,9 +100,10 @@ export default function App() {
   const loadCompareTicker = async (symbol) => {
     setCompareData((prev) => ({ ...prev, [symbol]: null }))
     try {
-      const [q, f] = await fetchAll(symbol)
+      const [q, f] = await fetchAll(symbol, token)
       setCompareData((prev) => ({ ...prev, [symbol]: { quote: q, financials: f } }))
     } catch (e) {
+      if (e.message === 'Unauthorized' || e.message.includes('401')) { handle401(); return }
       setCompareData((prev) => ({ ...prev, [symbol]: { error: e.message } }))
     }
   }
@@ -99,13 +119,20 @@ export default function App() {
     setCompareData((prev) => { const next = { ...prev }; delete next[symbol]; return next })
   }
 
+  if (!token) return <LoginPage onLogin={handleLogin} />
+
   return (
     <div className={styles.app}>
       <div className={styles.header}>
         <div className={styles.title}>Finnhub Dashboard</div>
-        <button className={styles.themeBtn} onClick={toggleTheme}>
-          {isDark ? 'Light mode' : 'Dark mode'}
-        </button>
+        <div className={styles.headerActions}>
+          <button className={styles.themeBtn} onClick={toggleTheme}>
+            {isDark ? 'Light mode' : 'Dark mode'}
+          </button>
+          <button className={styles.logoutBtn} onClick={handleLogout}>
+            Log out
+          </button>
+        </div>
       </div>
 
       <div className={styles.tabs}>

@@ -2,6 +2,8 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import CompareTable from '../components/CompareView/CompareTable'
 
+beforeEach(() => localStorage.clear())
+
 const makeData = (overrides = {}) => ({
   AAPL: {
     quote: { current: 189.5, high: 191.0, low: 187.3 },
@@ -88,8 +90,7 @@ describe('CompareTable', () => {
     render(<CompareTable tickers={['AAPL', 'MSFT']} data={data} onRemove={() => {}} />)
     await userEvent.click(screen.getByText('Price'))
     const rows = screen.getAllByRole('row')
-    const firstDataRow = rows[1]
-    expect(within(firstDataRow).getByText('AAPL')).toBeInTheDocument()
+    expect(within(rows[1]).getByText('AAPL')).toBeInTheDocument()
   })
 
   it('toggles to descending sort on second click', async () => {
@@ -105,5 +106,31 @@ describe('CompareTable', () => {
     await userEvent.click(screen.getByText('Price ▲'))
     const rows = screen.getAllByRole('row')
     expect(within(rows[1]).getByText('MSFT')).toBeInTheDocument()
+  })
+
+  it('opens the Columns panel when the Columns button is clicked', async () => {
+    render(<CompareTable tickers={['AAPL']} data={makeData()} onRemove={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /columns/i }))
+    expect(screen.getByLabelText('Price')).toBeInTheDocument()
+    expect(screen.getByLabelText('Market Cap')).toBeInTheDocument()
+  })
+
+  it('hides a column when its checkbox is unchecked', async () => {
+    render(<CompareTable tickers={['AAPL']} data={makeData()} onRemove={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /columns/i }))
+    await userEvent.click(screen.getByLabelText('Price'))
+    // panel closed; "Price" should not appear as a table header
+    await userEvent.click(screen.getByRole('button', { name: /columns/i }))
+    const headers = screen.getAllByRole('columnheader')
+    expect(headers.every((h) => h.textContent !== 'Price')).toBe(true)
+  })
+
+  it('restores a hidden column when its checkbox is rechecked', async () => {
+    render(<CompareTable tickers={['AAPL']} data={makeData()} onRemove={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /columns/i }))
+    await userEvent.click(screen.getByLabelText('Price'))
+    await userEvent.click(screen.getByLabelText('Price'))
+    const headers = screen.getAllByRole('columnheader')
+    expect(headers.some((h) => h.textContent === 'Price')).toBe(true)
   })
 })

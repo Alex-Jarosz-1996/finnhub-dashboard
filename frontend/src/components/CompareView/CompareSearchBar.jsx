@@ -1,34 +1,8 @@
 import { useState } from 'react'
-
-const s = {
-  wrapper: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' },
-  form: { display: 'flex', gap: '8px' },
-  input: {
-    padding: '8px 12px',
-    background: '#1e2130',
-    border: '1px solid #2d3348',
-    borderRadius: '8px',
-    color: '#e2e8f0',
-    fontSize: '14px',
-    outline: 'none',
-    textTransform: 'uppercase',
-    width: '160px',
-  },
-  button: {
-    padding: '8px 16px',
-    background: '#3b82f6',
-    border: 'none',
-    borderRadius: '8px',
-    color: '#fff',
-    fontSize: '14px',
-    cursor: 'pointer',
-    fontWeight: 600,
-  },
-  buttonDisabled: { background: '#374151', cursor: 'not-allowed' },
-  counter: { fontSize: '13px', color: '#94a3b8' },
-}
+import { useTheme } from '../../theme.js'
 
 export default function CompareSearchBar({ onAdd, count, max = 10 }) {
+  const theme = useTheme()
   const [value, setValue] = useState('')
   const full = count >= max
 
@@ -39,6 +13,34 @@ export default function CompareSearchBar({ onAdd, count, max = 10 }) {
       onAdd(trimmed)
       setValue('')
     }
+  }
+
+  const s = {
+    wrapper: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' },
+    form: { display: 'flex', gap: '8px' },
+    input: {
+      padding: '8px 12px',
+      background: theme.bgCard,
+      border: `1px solid ${theme.border}`,
+      borderRadius: '8px',
+      color: theme.textPrimary,
+      fontSize: '14px',
+      outline: 'none',
+      textTransform: 'uppercase',
+      width: '160px',
+    },
+    button: {
+      padding: '8px 16px',
+      background: theme.btnPrimary,
+      border: 'none',
+      borderRadius: '8px',
+      color: '#fff',
+      fontSize: '14px',
+      cursor: 'pointer',
+      fontWeight: 600,
+    },
+    buttonDisabled: { background: theme.btnDisabled, cursor: 'not-allowed' },
+    counter: { fontSize: '13px', color: theme.textSecondary },
   }
 
   return (

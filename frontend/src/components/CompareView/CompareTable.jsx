@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTheme } from '../../theme.js'
 
 // format: 'dollar' | 'percent' | 'percent_decimal' | null
 const COLUMNS = [
@@ -41,77 +42,8 @@ function fmtNum(n, format) {
   return `${prefix}${formatted}${suffix}`
 }
 
-const s = {
-  toolbar: { display: 'flex', justifyContent: 'flex-end', marginBottom: '8px', position: 'relative' },
-  colBtn: {
-    padding: '6px 12px',
-    background: '#1e2130',
-    border: '1px solid #2d3348',
-    borderRadius: '6px',
-    color: '#94a3b8',
-    fontSize: '12px',
-    cursor: 'pointer',
-    fontWeight: 600,
-  },
-  panel: {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    marginTop: '4px',
-    background: '#1e2130',
-    border: '1px solid #2d3348',
-    borderRadius: '8px',
-    padding: '10px 14px',
-    zIndex: 10,
-    minWidth: '180px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  panelLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    color: '#e2e8f0',
-  },
-  wrapper: { overflowX: 'auto' },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    background: '#1e2130',
-    border: '1px solid #2d3348',
-    borderRadius: '10px',
-    overflow: 'hidden',
-    fontSize: '13px',
-  },
-  th: {
-    padding: '10px 12px',
-    color: '#94a3b8',
-    textAlign: 'left',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-    borderBottom: '1px solid #2d3348',
-    userSelect: 'none',
-  },
-  thActive: { color: '#60a5fa' },
-  td: { padding: '10px 12px', color: '#e2e8f0', whiteSpace: 'nowrap' },
-  tdSymbol: { fontWeight: 700, color: '#60a5fa' },
-  removeBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#64748b',
-    cursor: 'pointer',
-    fontSize: '16px',
-    lineHeight: 1,
-    padding: '0 4px',
-  },
-  loading: { color: '#64748b', fontStyle: 'italic' },
-  error: { color: '#f87171' },
-}
-
 export default function CompareTable({ tickers, data, onRemove }) {
+  const theme = useTheme()
   const [sortKey, setSortKey] = useState(null)
   const [sortAsc, setSortAsc] = useState(true)
   const [hiddenCols, setHiddenCols] = useState(loadHidden)
@@ -153,6 +85,50 @@ export default function CompareTable({ tickers, data, onRemove }) {
   })
 
   const toggleableCols = COLUMNS.filter((c) => c.key !== 'symbol')
+
+  const s = {
+    toolbar: { display: 'flex', justifyContent: 'flex-end', marginBottom: '8px', position: 'relative' },
+    colBtn: {
+      padding: '6px 12px',
+      background: theme.bgCard,
+      border: `1px solid ${theme.border}`,
+      borderRadius: '6px',
+      color: theme.textSecondary,
+      fontSize: '12px',
+      cursor: 'pointer',
+      fontWeight: 600,
+    },
+    panel: {
+      position: 'absolute', top: '100%', right: 0, marginTop: '4px',
+      background: theme.bgCard, border: `1px solid ${theme.border}`,
+      borderRadius: '8px', padding: '10px 14px', zIndex: 10,
+      minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '8px',
+    },
+    panelLabel: {
+      display: 'flex', alignItems: 'center', gap: '8px',
+      cursor: 'pointer', fontSize: '13px', color: theme.textPrimary,
+    },
+    wrapper: { overflowX: 'auto' },
+    table: {
+      width: '100%', borderCollapse: 'collapse',
+      background: theme.bgCard, border: `1px solid ${theme.border}`,
+      borderRadius: '10px', overflow: 'hidden', fontSize: '13px',
+    },
+    th: {
+      padding: '10px 12px', color: theme.textSecondary, textAlign: 'left',
+      cursor: 'pointer', whiteSpace: 'nowrap',
+      borderBottom: `1px solid ${theme.border}`, userSelect: 'none',
+    },
+    thActive: { color: theme.accent },
+    td: { padding: '10px 12px', color: theme.textPrimary, whiteSpace: 'nowrap' },
+    tdSymbol: { fontWeight: 700, color: theme.accent },
+    removeBtn: {
+      background: 'none', border: 'none', color: theme.textMuted,
+      cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 4px',
+    },
+    loading: { color: theme.textMuted, fontStyle: 'italic' },
+    error: { color: theme.errorText },
+  }
 
   return (
     <div>
@@ -198,7 +174,7 @@ export default function CompareTable({ tickers, data, onRemove }) {
             {sorted.map((symbol, i) => {
               const entry = data[symbol]
               const isLast = i === sorted.length - 1
-              const rowBorder = isLast ? 'none' : '1px solid #2d3348'
+              const rowBorder = isLast ? 'none' : `1px solid ${theme.border}`
               const td = { ...s.td, borderBottom: rowBorder }
 
               if (!entry) {

@@ -2,9 +2,48 @@
 
 A stock financial dashboard SPA. FastAPI backend + React frontend.
 
-## Backend
+---
 
-### Setup
+## Docker (recommended)
+
+### Prerequisites
+
+Ensure `backend/.env` exists with your Finnhub API key:
+
+```
+FINNHUB_API_KEY=your_api_key_here
+REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
+```
+
+### Build and run
+
+```bash
+docker compose up --build
+```
+
+App: `http://localhost`
+
+The frontend is served by nginx on port 80. All `/api` requests are proxied internally to the backend — port 8000 is not exposed to the host.
+
+### Stop
+
+```bash
+docker compose down
+```
+
+### Rebuild after code changes
+
+```bash
+docker compose up --build
+```
+
+---
+
+## Local development (without Docker)
+
+### Backend
+
+#### Setup
 
 ```bash
 cd backend
@@ -19,7 +58,7 @@ FINNHUB_API_KEY=your_api_key_here
 REQUESTS_CA_BUNDLE=/etc/ssl/certs/ca-certificates.crt
 ```
 
-### Run
+#### Run
 
 ```bash
 cd backend
@@ -28,7 +67,7 @@ venv/bin/uvicorn main:app --reload --port 8000
 
 Interactive docs: `http://localhost:8000/docs`
 
-### Tests
+#### Tests
 
 ```bash
 cd backend
@@ -43,7 +82,7 @@ venv/bin/pytest tests/ -v
 | `tests/test_financials.py` | `GET /api/financials/{symbol}` — shape, groups, 404, 502 |
 | `tests/test_finnhub_service.py` | Service functions and TTL cache behaviour |
 
-### Kill a stale process on port 8000
+#### Kill a stale process on port 8000
 
 ```bash
 fuser -k 8000/tcp
@@ -51,16 +90,16 @@ fuser -k 8000/tcp
 
 ---
 
-## Frontend
+### Frontend
 
-### Setup
+#### Setup
 
 ```bash
 cd frontend
 npm install
 ```
 
-### Run
+#### Run
 
 ```bash
 cd frontend
@@ -71,14 +110,14 @@ App: `http://localhost:5173`
 
 > The backend must also be running on port 8000 for API calls to work.
 
-### Tests
+#### Tests
 
 ```bash
 cd frontend
 npm test
 ```
 
-36 tests across six files — no backend connection required:
+54 tests across six files — no backend connection required:
 
 | File | What it tests |
 |------|--------------|

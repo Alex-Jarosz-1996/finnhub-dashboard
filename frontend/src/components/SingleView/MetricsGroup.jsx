@@ -1,94 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-
-const s = {
-  section: { marginBottom: '16px' },
-  titleRow: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: '6px',
-  },
-  collapseBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    cursor: 'pointer',
-    userSelect: 'none',
-    flex: 1,
-    background: 'none',
-    border: 'none',
-    padding: 0,
-    textAlign: 'left',
-  },
-  title: {
-    fontSize: '11px',
-    fontWeight: 700,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: '0.08em',
-  },
-  chevron: { fontSize: '9px', color: '#64748b' },
-  filterBtn: {
-    background: 'none',
-    border: 'none',
-    color: '#64748b',
-    cursor: 'pointer',
-    fontSize: '13px',
-    padding: '0 2px',
-    lineHeight: 1,
-  },
-  panelWrapper: { position: 'relative' },
-  panel: {
-    position: 'absolute',
-    top: '100%',
-    right: 0,
-    marginTop: '4px',
-    background: '#1e2130',
-    border: '1px solid #2d3348',
-    borderRadius: '8px',
-    padding: '10px 14px',
-    zIndex: 10,
-    minWidth: '200px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
-  },
-  panelDivider: { borderTop: '1px solid #2d3348', margin: '2px 0' },
-  panelLabel: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    cursor: 'pointer',
-    fontSize: '13px',
-    color: '#e2e8f0',
-  },
-  panelLabelAll: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    cursor: 'pointer',
-    fontSize: '12px',
-    fontWeight: 700,
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: '0.06em',
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    background: '#1e2130',
-    border: '1px solid #2d3348',
-    borderRadius: '10px',
-    overflow: 'hidden',
-  },
-  labelCell: { padding: '9px 16px', color: '#94a3b8', fontSize: '13px', width: '55%' },
-  valueCell: {
-    padding: '9px 16px',
-    color: '#e2e8f0',
-    fontSize: '13px',
-    fontWeight: 600,
-    textAlign: 'right',
-  },
-}
+import { useTheme } from '../../theme.js'
 
 const LABELS = {
   '52WeekHigh': '52-Week High',
@@ -181,6 +92,7 @@ function formatValue(val, key) {
 }
 
 export default function MetricsGroup({ title, data }) {
+  const theme = useTheme()
   const collapseKey = `finnhub_group_collapsed_${title}`
   const hiddenKey = `finnhub_hidden_metrics_${title}`
 
@@ -244,6 +156,52 @@ export default function MetricsGroup({ title, data }) {
   const allHidden = allKeys.every((k) => hiddenKeys.has(k))
   const someHidden = allKeys.some((k) => hiddenKeys.has(k))
 
+  const s = {
+    section: { marginBottom: '16px' },
+    titleRow: { display: 'flex', alignItems: 'center', marginBottom: '6px' },
+    collapseBtn: {
+      display: 'flex', alignItems: 'center', gap: '6px',
+      cursor: 'pointer', userSelect: 'none', flex: 1,
+      background: 'none', border: 'none', padding: 0, textAlign: 'left',
+    },
+    title: {
+      fontSize: '11px', fontWeight: 700, color: theme.textSecondary,
+      textTransform: 'uppercase', letterSpacing: '0.08em',
+    },
+    chevron: { fontSize: '9px', color: theme.textMuted },
+    filterBtn: {
+      background: 'none', border: 'none', color: theme.textMuted,
+      cursor: 'pointer', fontSize: '13px', padding: '0 2px', lineHeight: 1,
+    },
+    panelWrapper: { position: 'relative' },
+    panel: {
+      position: 'absolute', top: '100%', right: 0, marginTop: '4px',
+      background: theme.bgCard, border: `1px solid ${theme.border}`,
+      borderRadius: '8px', padding: '10px 14px', zIndex: 10,
+      minWidth: '200px', display: 'flex', flexDirection: 'column', gap: '8px',
+    },
+    panelDivider: { borderTop: `1px solid ${theme.border}`, margin: '2px 0' },
+    panelLabel: {
+      display: 'flex', alignItems: 'center', gap: '8px',
+      cursor: 'pointer', fontSize: '13px', color: theme.textPrimary,
+    },
+    panelLabelAll: {
+      display: 'flex', alignItems: 'center', gap: '8px',
+      cursor: 'pointer', fontSize: '12px', fontWeight: 700,
+      color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: '0.06em',
+    },
+    table: {
+      width: '100%', borderCollapse: 'collapse',
+      background: theme.bgCard, border: `1px solid ${theme.border}`,
+      borderRadius: '10px', overflow: 'hidden',
+    },
+    labelCell: { padding: '9px 16px', color: theme.textSecondary, fontSize: '13px', width: '55%' },
+    valueCell: {
+      padding: '9px 16px', color: theme.textPrimary,
+      fontSize: '13px', fontWeight: 600, textAlign: 'right',
+    },
+  }
+
   return (
     <div style={s.section}>
       <div style={s.titleRow}>
@@ -291,7 +249,7 @@ export default function MetricsGroup({ title, data }) {
             {visibleEntries.map(([key, val], i) => (
               <tr
                 key={key}
-                style={{ borderBottom: i < visibleEntries.length - 1 ? '1px solid #2d3348' : 'none' }}
+                style={{ borderBottom: i < visibleEntries.length - 1 ? `1px solid ${theme.border}` : 'none' }}
               >
                 <td style={s.labelCell}>{LABELS[key] || key}</td>
                 <td style={s.valueCell}>{formatValue(val, key)}</td>

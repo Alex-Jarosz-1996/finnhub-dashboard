@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useTheme } from '../../theme.js'
+import styles from './ReportedFinancials.module.css'
 
 function fmtNum(n) {
   if (n === null || n === undefined) return '—'
@@ -11,7 +11,6 @@ function fmtNum(n) {
 }
 
 function ReportTable({ title, rows }) {
-  const theme = useTheme()
   const collapseKey = `finnhub_group_collapsed_${title}`
   const hiddenKey = `finnhub_hidden_metrics_${title}`
 
@@ -69,71 +68,29 @@ function ReportTable({ title, rows }) {
   const allHidden = allLabels.every((l) => hiddenLabels.has(l))
   const someHidden = allLabels.some((l) => hiddenLabels.has(l))
 
-  const s = {
-    section: { marginBottom: '16px' },
-    titleRow: { display: 'flex', alignItems: 'center', marginBottom: '6px' },
-    collapseBtn: {
-      display: 'flex', alignItems: 'center', gap: '6px',
-      cursor: 'pointer', userSelect: 'none', flex: 1,
-      background: 'none', border: 'none', padding: 0, textAlign: 'left',
-    },
-    title: {
-      fontSize: '11px', fontWeight: 700, color: theme.textSecondary,
-      textTransform: 'uppercase', letterSpacing: '0.08em',
-    },
-    chevron: { fontSize: '9px', color: theme.textMuted },
-    filterBtn: {
-      background: 'none', border: 'none', color: theme.textMuted,
-      cursor: 'pointer', fontSize: '13px', padding: '0 2px', lineHeight: 1,
-    },
-    panelWrapper: { position: 'relative' },
-    panel: {
-      position: 'absolute', top: '100%', right: 0, marginTop: '4px',
-      background: theme.bgCard, border: `1px solid ${theme.border}`,
-      borderRadius: '8px', padding: '10px 14px', zIndex: 10,
-      minWidth: '220px', maxHeight: '320px', overflowY: 'auto',
-      display: 'flex', flexDirection: 'column', gap: '8px',
-    },
-    panelDivider: { borderTop: `1px solid ${theme.border}`, margin: '2px 0' },
-    panelLabel: {
-      display: 'flex', alignItems: 'center', gap: '8px',
-      cursor: 'pointer', fontSize: '13px', color: theme.textPrimary,
-    },
-    panelLabelAll: {
-      display: 'flex', alignItems: 'center', gap: '8px',
-      cursor: 'pointer', fontSize: '12px', fontWeight: 700,
-      color: theme.textSecondary, textTransform: 'uppercase', letterSpacing: '0.06em',
-    },
-    table: {
-      width: '100%', borderCollapse: 'collapse',
-      background: theme.bgCard, border: `1px solid ${theme.border}`,
-      borderRadius: '10px', overflow: 'hidden',
-    },
-    labelCell: { padding: '9px 16px', color: theme.textSecondary, fontSize: '13px', width: '55%' },
-    valueCell: {
-      padding: '9px 16px', color: theme.textPrimary,
-      fontSize: '13px', fontWeight: 600, textAlign: 'right',
-    },
-  }
-
   return (
-    <div style={s.section}>
-      <div style={s.titleRow}>
-        <button style={s.collapseBtn} onClick={toggleCollapse} aria-expanded={!collapsed} aria-label={`Toggle ${title}`}>
-          <span style={s.chevron}>{collapsed ? '▶' : '▼'}</span>
-          <span style={s.title}>{title}</span>
+    <div className={styles.section}>
+      <div className={styles.titleRow}>
+        <button
+          className={styles.collapseBtn}
+          onClick={toggleCollapse}
+          aria-expanded={!collapsed}
+          aria-label={`Toggle ${title}`}
+        >
+          <span className={styles.chevron}>{collapsed ? '▶' : '▼'}</span>
+          <span className={styles.title}>{title}</span>
         </button>
-        <div ref={panelRef} style={s.panelWrapper}>
+        <div ref={panelRef} className={styles.panelWrapper}>
           <button
-            style={s.filterBtn}
+            className={styles.filterBtn}
             onClick={() => setShowPanel((v) => !v)}
             aria-label={`Filter ${title} metrics`}
           >
             ⚙
           </button>
           {showPanel && (
-            <div style={s.panel}>
-              <label style={s.panelLabelAll}>
+            <div className={styles.panel}>
+              <label className={styles.panelLabelAll}>
                 <input
                   type="checkbox"
                   checked={!allHidden}
@@ -142,11 +99,11 @@ function ReportTable({ title, rows }) {
                 />
                 All
               </label>
-              <div style={s.panelDivider} />
+              <div className={styles.panelDivider} />
               {rows.map((row) => {
                 const label = row.label || row.concept
                 return (
-                  <label key={label} style={s.panelLabel}>
+                  <label key={label} className={styles.panelLabel}>
                     <input
                       type="checkbox"
                       checked={!hiddenLabels.has(label)}
@@ -161,15 +118,12 @@ function ReportTable({ title, rows }) {
         </div>
       </div>
       {!collapsed && visibleRows.length > 0 && (
-        <table style={s.table}>
+        <table className={styles.table}>
           <tbody>
             {visibleRows.map((row, i) => (
-              <tr
-                key={i}
-                style={{ borderBottom: i < visibleRows.length - 1 ? `1px solid ${theme.border}` : 'none' }}
-              >
-                <td style={s.labelCell}>{row.label || row.concept}</td>
-                <td style={s.valueCell}>{fmtNum(row.value)}</td>
+              <tr key={i}>
+                <td className={styles.labelCell}>{row.label || row.concept}</td>
+                <td className={styles.valueCell}>{fmtNum(row.value)}</td>
               </tr>
             ))}
           </tbody>

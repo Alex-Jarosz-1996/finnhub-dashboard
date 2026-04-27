@@ -1,0 +1,39 @@
+/* Default (dark) theme */
+:root {
+  --bg-app:        #0f1117;
+  --bg-card:       #1e2130;
+  --border:        #2d3348;
+  --text-primary:  #e2e8f0;
+  --text-secondary:#94a3b8;
+  --text-muted:    #64748b;
+  --accent:        #60a5fa;
+  --btn-primary:   #3b82f6;
+  --btn-disabled:  #374151;
+  --error-text:    #f87171;
+  --error-bg:      #1e1a2e;
+  --error-border:  #7f1d1d;
+}
+
+[data-theme="light"] {
+  --bg-app:        #f1f5f9;
+  --bg-card:       #ffffff;
+  --border:        #e2e8f0;
+  --text-primary:  #0f172a;
+  --text-secondary:#475569;
+  --text-muted:    #94a3b8;
+  --accent:        #2563eb;
+  --btn-primary:   #3b82f6;
+  --btn-disabled:  #cbd5e1;
+  --error-text:    #dc2626;
+  --error-bg:      #fef2f2;
+  --error-border:  #fecaca;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--bg-app);
+}

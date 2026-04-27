@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useLayoutEffect } from 'react'
 import { fetchAll } from './api.js'
-import { DARK, LIGHT, ThemeContext } from './theme.js'
+import styles from './App.module.css'
 import SearchBar from './components/SearchBar.jsx'
 import QuoteCard from './components/SingleView/QuoteCard.jsx'
 import MetricsGroup from './components/SingleView/MetricsGroup.jsx'
@@ -28,18 +28,16 @@ export default function App() {
     try { return localStorage.getItem(THEME_KEY) !== 'light' }
     catch { return true }
   })
-  const theme = isDark ? DARK : LIGHT
+
+  useLayoutEffect(() => {
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light')
+  }, [isDark])
 
   const toggleTheme = () => {
     const next = !isDark
     setIsDark(next)
     localStorage.setItem(THEME_KEY, next ? 'dark' : 'light')
   }
-
-  useEffect(() => {
-    document.body.style.backgroundColor = theme.bgApp
-    document.body.style.margin = '0'
-  }, [theme.bgApp])
 
   const [tab, setTab] = useState('single')
 
@@ -101,108 +99,57 @@ export default function App() {
     setCompareData((prev) => { const next = { ...prev }; delete next[symbol]; return next })
   }
 
-  const s = {
-    app: {
-      maxWidth: '960px',
-      margin: '0 auto',
-      padding: '32px 20px',
-      minHeight: '100vh',
-    },
-    header: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: '24px',
-    },
-    title: { fontSize: '22px', fontWeight: 800, color: theme.textPrimary },
-    themeBtn: {
-      padding: '6px 14px',
-      background: theme.bgCard,
-      border: `1px solid ${theme.border}`,
-      borderRadius: '8px',
-      color: theme.textSecondary,
-      cursor: 'pointer',
-      fontSize: '13px',
-      fontWeight: 600,
-    },
-    tabs: { display: 'flex', gap: '4px', marginBottom: '28px' },
-    tab: {
-      padding: '8px 20px',
-      border: `1px solid ${theme.border}`,
-      borderRadius: '8px',
-      background: 'none',
-      color: theme.textSecondary,
-      cursor: 'pointer',
-      fontSize: '14px',
-      fontWeight: 600,
-    },
-    tabActive: { background: theme.btnPrimary, borderColor: theme.btnPrimary, color: '#fff' },
-    error: {
-      padding: '12px 16px',
-      background: theme.errorBg,
-      border: `1px solid ${theme.errorBorder}`,
-      borderRadius: '8px',
-      color: theme.errorText,
-      marginBottom: '20px',
-      fontSize: '14px',
-    },
-    loading: { color: theme.textMuted, fontSize: '14px', marginBottom: '20px' },
-    empty: { color: theme.textMuted, fontSize: '14px', marginTop: '40px', textAlign: 'center' },
-  }
-
   return (
-    <ThemeContext.Provider value={theme}>
-      <div style={s.app}>
-        <div style={s.header}>
-          <div style={s.title}>Finnhub Dashboard</div>
-          <button style={s.themeBtn} onClick={toggleTheme}>
-            {isDark ? 'Light mode' : 'Dark mode'}
-          </button>
-        </div>
-
-        <div style={s.tabs}>
-          {[['single', 'Single Ticker'], ['compare', 'Compare']].map(([key, label]) => (
-            <button
-              key={key}
-              style={{ ...s.tab, ...(tab === key ? s.tabActive : {}) }}
-              onClick={() => setTab(key)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {tab === 'single' && (
-          <div>
-            <SearchBar onSearch={handleSingleSearch} />
-            {singleLoading && <div style={s.loading}>Loading...</div>}
-            {singleError && <div style={s.error}>{singleError}</div>}
-            {quote && <QuoteCard quote={quote} />}
-            {financials && (
-              <>
-                {Object.entries(financials.metrics).map(([group, data]) => (
-                  <MetricsGroup key={group} title={GROUP_LABELS[group] || group} data={data} />
-                ))}
-                <ReportedFinancials reported={financials.reported} />
-              </>
-            )}
-            {!singleLoading && !quote && !singleError && (
-              <div style={s.empty}>Search for a ticker to get started.</div>
-            )}
-          </div>
-        )}
-
-        {tab === 'compare' && (
-          <div>
-            <CompareSearchBar onAdd={handleCompareAdd} count={compareTickers.length} max={MAX_COMPARE} />
-            {compareTickers.length === 0 ? (
-              <div style={s.empty}>Add up to {MAX_COMPARE} tickers to compare them.</div>
-            ) : (
-              <CompareTable tickers={compareTickers} data={compareData} onRemove={handleCompareRemove} />
-            )}
-          </div>
-        )}
+    <div className={styles.app}>
+      <div className={styles.header}>
+        <div className={styles.title}>Finnhub Dashboard</div>
+        <button className={styles.themeBtn} onClick={toggleTheme}>
+          {isDark ? 'Light mode' : 'Dark mode'}
+        </button>
       </div>
-    </ThemeContext.Provider>
+
+      <div className={styles.tabs}>
+        {[['single', 'Single Ticker'], ['compare', 'Compare']].map(([key, label]) => (
+          <button
+            key={key}
+            className={`${styles.tab} ${tab === key ? styles.tabActive : ''}`}
+            onClick={() => setTab(key)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'single' && (
+        <div>
+          <SearchBar onSearch={handleSingleSearch} />
+          {singleLoading && <div className={styles.loading}>Loading...</div>}
+          {singleError && <div className={styles.error}>{singleError}</div>}
+          {quote && <QuoteCard quote={quote} />}
+          {financials && (
+            <>
+              {Object.entries(financials.metrics).map(([group, data]) => (
+                <MetricsGroup key={group} title={GROUP_LABELS[group] || group} data={data} />
+              ))}
+              <ReportedFinancials reported={financials.reported} />
+            </>
+          )}
+          {!singleLoading && !quote && !singleError && (
+            <div className={styles.empty}>Search for a ticker to get started.</div>
+          )}
+        </div>
+      )}
+
+      {tab === 'compare' && (
+        <div>
+          <CompareSearchBar onAdd={handleCompareAdd} count={compareTickers.length} max={MAX_COMPARE} />
+          {compareTickers.length === 0 ? (
+            <div className={styles.empty}>Add up to {MAX_COMPARE} tickers to compare them.</div>
+          ) : (
+            <CompareTable tickers={compareTickers} data={compareData} onRemove={handleCompareRemove} />
+          )}
+        </div>
+      )}
+    </div>
   )
 }

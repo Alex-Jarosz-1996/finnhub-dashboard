@@ -1,8 +1,7 @@
 import { useState } from 'react'
-import { useTheme } from '../../theme.js'
+import styles from './CompareSearchBar.module.css'
 
 export default function CompareSearchBar({ onAdd, count, max = 10 }) {
-  const theme = useTheme()
   const [value, setValue] = useState('')
   const full = count >= max
 
@@ -15,54 +14,22 @@ export default function CompareSearchBar({ onAdd, count, max = 10 }) {
     }
   }
 
-  const s = {
-    wrapper: { display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' },
-    form: { display: 'flex', gap: '8px' },
-    input: {
-      padding: '8px 12px',
-      background: theme.bgCard,
-      border: `1px solid ${theme.border}`,
-      borderRadius: '8px',
-      color: theme.textPrimary,
-      fontSize: '14px',
-      outline: 'none',
-      textTransform: 'uppercase',
-      width: '160px',
-    },
-    button: {
-      padding: '8px 16px',
-      background: theme.btnPrimary,
-      border: 'none',
-      borderRadius: '8px',
-      color: '#fff',
-      fontSize: '14px',
-      cursor: 'pointer',
-      fontWeight: 600,
-    },
-    buttonDisabled: { background: theme.btnDisabled, cursor: 'not-allowed' },
-    counter: { fontSize: '13px', color: theme.textSecondary },
-  }
-
   return (
-    <div style={s.wrapper}>
-      <form onSubmit={submit} style={s.form}>
+    <div className={styles.wrapper}>
+      <form onSubmit={submit} className={styles.form}>
         <input
-          style={s.input}
+          className={styles.input}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           placeholder="Add ticker..."
           maxLength={10}
           disabled={full}
         />
-        <button
-          style={{ ...s.button, ...(full ? s.buttonDisabled : {}) }}
-          type="submit"
-          disabled={full}
-        >
+        <button className={styles.button} type="submit" disabled={full}>
           Add
         </button>
       </form>
-      <span style={s.counter}>{count}/{max} tickers</span>
+      <span className={styles.counter}>{count}/{max} tickers</span>
     </div>
   )
 }

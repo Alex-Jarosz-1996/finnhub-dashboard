@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useTheme } from '../../theme.js'
+import styles from './CompareTable.module.css'
 
 // format: 'dollar' | 'percent' | 'percent_decimal' | null
 const COLUMNS = [
@@ -43,7 +43,6 @@ function fmtNum(n, format) {
 }
 
 export default function CompareTable({ tickers, data, onRemove }) {
-  const theme = useTheme()
   const [sortKey, setSortKey] = useState(null)
   const [sortAsc, setSortAsc] = useState(true)
   const [hiddenCols, setHiddenCols] = useState(loadHidden)
@@ -86,61 +85,17 @@ export default function CompareTable({ tickers, data, onRemove }) {
 
   const toggleableCols = COLUMNS.filter((c) => c.key !== 'symbol')
 
-  const s = {
-    toolbar: { display: 'flex', justifyContent: 'flex-end', marginBottom: '8px', position: 'relative' },
-    colBtn: {
-      padding: '6px 12px',
-      background: theme.bgCard,
-      border: `1px solid ${theme.border}`,
-      borderRadius: '6px',
-      color: theme.textSecondary,
-      fontSize: '12px',
-      cursor: 'pointer',
-      fontWeight: 600,
-    },
-    panel: {
-      position: 'absolute', top: '100%', right: 0, marginTop: '4px',
-      background: theme.bgCard, border: `1px solid ${theme.border}`,
-      borderRadius: '8px', padding: '10px 14px', zIndex: 10,
-      minWidth: '180px', display: 'flex', flexDirection: 'column', gap: '8px',
-    },
-    panelLabel: {
-      display: 'flex', alignItems: 'center', gap: '8px',
-      cursor: 'pointer', fontSize: '13px', color: theme.textPrimary,
-    },
-    wrapper: { overflowX: 'auto' },
-    table: {
-      width: '100%', borderCollapse: 'collapse',
-      background: theme.bgCard, border: `1px solid ${theme.border}`,
-      borderRadius: '10px', overflow: 'hidden', fontSize: '13px',
-    },
-    th: {
-      padding: '10px 12px', color: theme.textSecondary, textAlign: 'left',
-      cursor: 'pointer', whiteSpace: 'nowrap',
-      borderBottom: `1px solid ${theme.border}`, userSelect: 'none',
-    },
-    thActive: { color: theme.accent },
-    td: { padding: '10px 12px', color: theme.textPrimary, whiteSpace: 'nowrap' },
-    tdSymbol: { fontWeight: 700, color: theme.accent },
-    removeBtn: {
-      background: 'none', border: 'none', color: theme.textMuted,
-      cursor: 'pointer', fontSize: '16px', lineHeight: 1, padding: '0 4px',
-    },
-    loading: { color: theme.textMuted, fontStyle: 'italic' },
-    error: { color: theme.errorText },
-  }
-
   return (
     <div>
-      <div style={s.toolbar}>
-        <div ref={panelRef} style={{ position: 'relative' }}>
-          <button style={s.colBtn} onClick={() => setShowPanel((v) => !v)}>
+      <div className={styles.toolbar}>
+        <div ref={panelRef} className={styles.panelWrapper}>
+          <button className={styles.colBtn} onClick={() => setShowPanel((v) => !v)}>
             Columns {showPanel ? '▲' : '▼'}
           </button>
           {showPanel && (
-            <div style={s.panel}>
+            <div className={styles.panel}>
               {toggleableCols.map((col) => (
-                <label key={col.key} style={s.panelLabel}>
+                <label key={col.key} className={styles.panelLabel}>
                   <input
                     type="checkbox"
                     checked={!hiddenCols.has(col.key)}
@@ -154,15 +109,15 @@ export default function CompareTable({ tickers, data, onRemove }) {
         </div>
       </div>
 
-      <div style={s.wrapper}>
-        <table style={s.table}>
+      <div className={styles.wrapper}>
+        <table className={styles.table}>
           <thead>
             <tr>
-              <th style={s.th} />
+              <th className={styles.th} />
               {visibleCols.map((col) => (
                 <th
                   key={col.key}
-                  style={{ ...s.th, ...(sortKey === col.key ? s.thActive : {}) }}
+                  className={`${styles.th} ${sortKey === col.key ? styles.thActive : ''}`}
                   onClick={() => handleSort(col.key)}
                 >
                   {col.label}{sortKey === col.key ? (sortAsc ? ' ▲' : ' ▼') : ''}
@@ -171,18 +126,15 @@ export default function CompareTable({ tickers, data, onRemove }) {
             </tr>
           </thead>
           <tbody>
-            {sorted.map((symbol, i) => {
+            {sorted.map((symbol) => {
               const entry = data[symbol]
-              const isLast = i === sorted.length - 1
-              const rowBorder = isLast ? 'none' : `1px solid ${theme.border}`
-              const td = { ...s.td, borderBottom: rowBorder }
 
               if (!entry) {
                 return (
                   <tr key={symbol}>
-                    <td style={td}><button style={s.removeBtn} onClick={() => onRemove(symbol)}>×</button></td>
-                    <td style={{ ...td, ...s.tdSymbol }}>{symbol}</td>
-                    <td colSpan={visibleCols.length - 1} style={{ ...td, ...s.loading }}>Loading...</td>
+                    <td className={styles.td}><button className={styles.removeBtn} onClick={() => onRemove(symbol)}>×</button></td>
+                    <td className={`${styles.td} ${styles.tdSymbol}`}>{symbol}</td>
+                    <td colSpan={visibleCols.length - 1} className={`${styles.td} ${styles.loading}`}>Loading...</td>
                   </tr>
                 )
               }
@@ -190,18 +142,21 @@ export default function CompareTable({ tickers, data, onRemove }) {
               if (entry.error) {
                 return (
                   <tr key={symbol}>
-                    <td style={td}><button style={s.removeBtn} onClick={() => onRemove(symbol)}>×</button></td>
-                    <td style={{ ...td, ...s.tdSymbol }}>{symbol}</td>
-                    <td colSpan={visibleCols.length - 1} style={{ ...td, ...s.error }}>{entry.error}</td>
+                    <td className={styles.td}><button className={styles.removeBtn} onClick={() => onRemove(symbol)}>×</button></td>
+                    <td className={`${styles.td} ${styles.tdSymbol}`}>{symbol}</td>
+                    <td colSpan={visibleCols.length - 1} className={`${styles.td} ${styles.error}`}>{entry.error}</td>
                   </tr>
                 )
               }
 
               return (
                 <tr key={symbol}>
-                  <td style={td}><button style={s.removeBtn} onClick={() => onRemove(symbol)}>×</button></td>
+                  <td className={styles.td}><button className={styles.removeBtn} onClick={() => onRemove(symbol)}>×</button></td>
                   {visibleCols.map((col) => (
-                    <td key={col.key} style={{ ...td, ...(col.key === 'symbol' ? s.tdSymbol : {}) }}>
+                    <td
+                      key={col.key}
+                      className={`${styles.td} ${col.key === 'symbol' ? styles.tdSymbol : ''}`}
+                    >
                       {col.key === 'symbol' ? symbol : fmtNum(dig(entry, col.path), col.format)}
                     </td>
                   ))}

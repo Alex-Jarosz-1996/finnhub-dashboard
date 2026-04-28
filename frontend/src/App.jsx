@@ -1,6 +1,7 @@
 import { useState, useEffect, useLayoutEffect } from 'react'
 import { fetchAll } from './api.js'
 import styles from './App.module.css'
+import { TOKEN_KEY, STORAGE_KEY, THEME_KEY } from './constants.js'
 import SearchBar from './components/SearchBar.jsx'
 import QuoteCard from './components/SingleView/QuoteCard.jsx'
 import MetricsGroup from './components/SingleView/MetricsGroup.jsx'
@@ -9,9 +10,6 @@ import CompareSearchBar from './components/CompareView/CompareSearchBar.jsx'
 import CompareTable from './components/CompareView/CompareTable.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 
-const STORAGE_KEY = 'finnhub_compare_tickers'
-const THEME_KEY = 'finnhub_theme'
-const TOKEN_KEY = 'finnhub_token'
 const MAX_COMPARE = 10
 
 const GROUP_LABELS = {
@@ -42,8 +40,12 @@ export default function App() {
   }
 
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
+  const [sessionExpired, setSessionExpired] = useState(false)
 
-  const handleLogin = (t) => setToken(t)
+  const handleLogin = (t) => {
+    setSessionExpired(false)
+    setToken(t)
+  }
 
   const handleLogout = () => {
     localStorage.removeItem(TOKEN_KEY)
@@ -52,6 +54,7 @@ export default function App() {
 
   const handle401 = () => {
     localStorage.removeItem(TOKEN_KEY)
+    setSessionExpired(true)
     setToken(null)
   }
 
@@ -119,7 +122,7 @@ export default function App() {
     setCompareData((prev) => { const next = { ...prev }; delete next[symbol]; return next })
   }
 
-  if (!token) return <LoginPage onLogin={handleLogin} />
+  if (!token) return <LoginPage onLogin={handleLogin} sessionExpired={sessionExpired} />
 
   return (
     <div className={styles.app}>

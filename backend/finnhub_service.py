@@ -1,9 +1,30 @@
 import os
+import time
 
 import finnhub
 from dotenv import load_dotenv
 
 from cache import cache
+
+
+class FinnhubRateLimitError(Exception):
+    pass
+
+
+def _call_with_retry(fn):
+    try:
+        return fn()
+    except Exception as e:
+        if "429" in str(e):
+            time.sleep(1)
+            try:
+                return fn()
+            except Exception as e2:
+                if "429" in str(e2):
+                    raise FinnhubRateLimitError("Finnhub rate limit exceeded") from e2
+                raise
+        raise
+
 
 load_dotenv()
 
@@ -17,15 +38,17 @@ _client = finnhub.Client(api_key=API_KEY)
 def get_quote(symbol: str) -> dict:
     key = ("quote", symbol.upper())
     if key not in cache:
-        cache[key] = _client.quote(symbol=symbol.upper())
+        cache[key] = _call_with_retry(lambda: _client.quote(symbol=symbol.upper()))
     return cache[key]
 
 
 def get_basic_financials(symbol: str) -> dict:
     key = ("basic_financials", symbol.upper())
     if key not in cache:
-        cache[key] = _client.company_basic_financials(
-            symbol=symbol.upper(), metric="all"
+        cache[key] = _call_with_retry(
+            lambda: _client.company_basic_financials(
+                symbol=symbol.upper(), metric="all"
+            )
         )
     return cache[key]
 
@@ -33,7 +56,9 @@ def get_basic_financials(symbol: str) -> dict:
 def get_financials_reported(symbol: str) -> dict:
     key = ("financials_reported", symbol.upper())
     if key not in cache:
-        cache[key] = _client.financials_reported(symbol=symbol.upper(), freq="annual")
+        cache[key] = _call_with_retry(
+            lambda: _client.financials_reported(symbol=symbol.upper(), freq="annual")
+        )
     return cache[key]
 
 

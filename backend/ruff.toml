@@ -4,8 +4,12 @@ select = [
     "F",   # pyflakes
     "I",   # isort
     "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "RUF", # ruff-specific
 ]
-ignore = []
+ignore = [
+    "B008", # Depends() in argument defaults is the standard FastAPI pattern
+]
 
 [format]
 quote-style = "double"

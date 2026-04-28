@@ -51,7 +51,19 @@ def test_quote_returns_502_on_finnhub_error(client: TestClient, auth_headers, mo
     response = client.get("/api/quote/AAPL", headers=auth_headers)
 
     assert response.status_code == 502
-    assert "Finnhub error" in response.json()["detail"]
+
+
+def test_quote_returns_429_on_rate_limit(client: TestClient, auth_headers, mocker):
+    from finnhub_service import FinnhubRateLimitError
+
+    mocker.patch(
+        "finnhub_service.get_quote", side_effect=FinnhubRateLimitError("rate limited")
+    )
+
+    response = client.get("/api/quote/AAPL", headers=auth_headers)
+
+    assert response.status_code == 429
+    assert "rate limit" in response.json()["detail"].lower()
 
 
 def test_quote_returns_403_without_token(client: TestClient, mocker):

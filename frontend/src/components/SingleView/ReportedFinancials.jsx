@@ -120,8 +120,8 @@ function ReportTable({ title, rows }) {
       {!collapsed && visibleRows.length > 0 && (
         <table className={styles.table}>
           <tbody>
-            {visibleRows.map((row, i) => (
-              <tr key={i}>
+            {visibleRows.map((row) => (
+              <tr key={row.label || row.concept}>
                 <td className={styles.labelCell}>{row.label || row.concept}</td>
                 <td className={styles.valueCell}>{fmtNum(row.value)}</td>
               </tr>

@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { vi } from 'vitest'
 import SearchBar from '../components/SearchBar'
 
 describe('SearchBar', () => {

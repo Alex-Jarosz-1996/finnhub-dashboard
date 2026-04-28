@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { login } from '../api.js'
+import { TOKEN_KEY } from '../constants.js'
 import styles from './LoginPage.module.css'
 
-export default function LoginPage({ onLogin }) {
+export default function LoginPage({ onLogin, sessionExpired = false }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -14,7 +15,7 @@ export default function LoginPage({ onLogin }) {
     setError(null)
     try {
       const { access_token } = await login(password)
-      localStorage.setItem('finnhub_token', access_token)
+      localStorage.setItem(TOKEN_KEY, access_token)
       onLogin(access_token)
     } catch {
       setError('Incorrect password.')
@@ -41,6 +42,9 @@ export default function LoginPage({ onLogin }) {
             {loading ? 'Logging in…' : 'Log in'}
           </button>
         </form>
+        {sessionExpired && !error && (
+          <p className={styles.error}>Your session has expired. Please log in again.</p>
+        )}
         {error && <p className={styles.error}>{error}</p>}
       </div>
     </div>

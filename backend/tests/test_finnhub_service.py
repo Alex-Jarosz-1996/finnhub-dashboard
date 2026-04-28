@@ -2,6 +2,7 @@ import pytest
 
 import finnhub_service
 from cache import cache
+from finnhub_service import FinnhubRateLimitError, _call_with_retry
 from tests.conftest import MOCK_BASIC_FINANCIALS, MOCK_FINANCIALS_REPORTED, MOCK_QUOTE
 
 
@@ -90,6 +91,60 @@ def test_get_quote_caches_result(mocker):
     finnhub_service.get_quote("AAPL")
 
     mock_call.assert_called_once()
+
+
+# --- _call_with_retry ---
+
+
+def test_call_with_retry_returns_result_on_success():
+    result = _call_with_retry(lambda: {"data": "ok"})
+    assert result == {"data": "ok"}
+
+
+def test_call_with_retry_retries_on_429_and_succeeds(mocker):
+    mocker.patch("finnhub_service.time.sleep")
+    call_count = 0
+
+    def fn():
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise Exception("429 Too Many Requests")
+        return {"data": "ok"}
+
+    result = _call_with_retry(fn)
+
+    assert result == {"data": "ok"}
+    assert call_count == 2
+    finnhub_service.time.sleep.assert_called_once_with(1)
+
+
+def test_call_with_retry_raises_rate_limit_error_after_two_429s(mocker):
+    mocker.patch("finnhub_service.time.sleep")
+
+    with pytest.raises(FinnhubRateLimitError):
+        _call_with_retry(
+            lambda: (_ for _ in ()).throw(Exception("429 Too Many Requests"))
+        )
+
+
+def test_call_with_retry_does_not_retry_non_429_exceptions(mocker):
+    sleep_mock = mocker.patch("finnhub_service.time.sleep")
+    call_count = 0
+
+    def fn():
+        nonlocal call_count
+        call_count += 1
+        raise Exception("Connection refused")
+
+    with pytest.raises(Exception, match="Connection refused"):
+        _call_with_retry(fn)
+
+    assert call_count == 1
+    sleep_mock.assert_not_called()
+
+
+# --- caching ---
 
 
 def test_get_quote_cache_is_case_insensitive(mocker):

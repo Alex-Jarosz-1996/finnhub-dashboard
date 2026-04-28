@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from fastapi import APIRouter, HTTPException, Request
 
-from limiter import limiter
+from core.limiter import limiter
 from models.auth import LoginRequest, TokenResponse
 
 logger = logging.getLogger(__name__)

@@ -4,7 +4,7 @@ import time
 import finnhub
 from dotenv import load_dotenv
 
-from cache import cache
+from core.cache import cache
 
 
 class FinnhubRateLimitError(Exception):

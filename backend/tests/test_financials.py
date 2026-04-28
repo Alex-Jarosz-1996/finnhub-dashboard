@@ -5,10 +5,12 @@ from tests.conftest import MOCK_BASIC_FINANCIALS, MOCK_FINANCIALS_REPORTED
 
 def _mock_financials(mocker):
     mocker.patch(
-        "finnhub_service.get_basic_financials", return_value=MOCK_BASIC_FINANCIALS
+        "services.finnhub_service.get_basic_financials",
+        return_value=MOCK_BASIC_FINANCIALS,
     )
     mocker.patch(
-        "finnhub_service.get_financials_reported", return_value=MOCK_FINANCIALS_REPORTED
+        "services.finnhub_service.get_financials_reported",
+        return_value=MOCK_FINANCIALS_REPORTED,
     )
 
 
@@ -86,10 +88,12 @@ def test_financials_returns_404_when_all_metrics_none(
     client: TestClient, auth_headers, mocker
 ):
     mocker.patch(
-        "finnhub_service.get_basic_financials",
+        "services.finnhub_service.get_basic_financials",
         return_value={"metric": {}, "series": {"quarterly": {}}},
     )
-    mocker.patch("finnhub_service.get_financials_reported", return_value={"data": []})
+    mocker.patch(
+        "services.finnhub_service.get_financials_reported", return_value={"data": []}
+    )
 
     response = client.get("/api/financials/ZZZZZ", headers=auth_headers)
 
@@ -101,7 +105,8 @@ def test_financials_returns_502_on_finnhub_error(
     client: TestClient, auth_headers, mocker
 ):
     mocker.patch(
-        "finnhub_service.get_basic_financials", side_effect=Exception("API unavailable")
+        "services.finnhub_service.get_basic_financials",
+        side_effect=Exception("API unavailable"),
     )
 
     response = client.get("/api/financials/AAPL", headers=auth_headers)
@@ -110,10 +115,10 @@ def test_financials_returns_502_on_finnhub_error(
 
 
 def test_financials_returns_429_on_rate_limit(client: TestClient, auth_headers, mocker):
-    from finnhub_service import FinnhubRateLimitError
+    from services.finnhub_service import FinnhubRateLimitError
 
     mocker.patch(
-        "finnhub_service.build_metrics",
+        "services.finnhub_service.build_metrics",
         side_effect=FinnhubRateLimitError("rate limited"),
     )
 

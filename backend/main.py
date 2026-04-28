@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from limiter import limiter
+from core.limiter import limiter
 from middleware.cors import register_cors
 from routes.auth import router as auth_router
 from routes.financials import router as financials_router

@@ -1,18 +1,21 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Request
 
-import finnhub_service
-from dependencies import get_current_user
-from finnhub_service import FinnhubRateLimitError
+from core.dependencies import get_current_user
+from core.limiter import limiter
 from models.quote import QuoteResponse
+from services import finnhub_service
+from services.finnhub_service import FinnhubRateLimitError
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api")
 
 
 @router.get("/quote/{symbol}", response_model=QuoteResponse)
+@limiter.limit("30/minute")
 def get_quote(
+    request: Request,
     symbol: str = Path(..., pattern=r"^[A-Za-z.]{1,10}$"),
     _=Depends(get_current_user),
 ):

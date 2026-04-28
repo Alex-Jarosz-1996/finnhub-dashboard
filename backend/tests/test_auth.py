@@ -32,10 +32,26 @@ def test_protected_route_without_token_returns_403(client: TestClient):
     assert response.status_code == 403
 
 
+def test_health_endpoint_returns_ok(client: TestClient):
+    response = client.get("/health")
+
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_protected_route_with_invalid_token_returns_401(client: TestClient):
+    response = client.get(
+        "/api/quote/AAPL", headers={"Authorization": "Bearer notavalidtoken"}
+    )
+
+    assert response.status_code == 401
+    assert "invalid" in response.json()["detail"].lower()
+
+
 def test_protected_route_with_expired_token_returns_401(client: TestClient, mocker):
     from tests.conftest import MOCK_QUOTE
 
-    mocker.patch("finnhub_service.get_quote", return_value=MOCK_QUOTE)
+    mocker.patch("services.finnhub_service.get_quote", return_value=MOCK_QUOTE)
 
     expired_payload = {"exp": datetime.now(timezone.utc) - timedelta(hours=1)}
     expired_token = jwt.encode(

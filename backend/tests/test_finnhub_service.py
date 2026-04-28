@@ -1,8 +1,8 @@
 import pytest
 
-import finnhub_service
-from cache import cache
-from finnhub_service import FinnhubRateLimitError, _call_with_retry
+from core.cache import cache
+from services import finnhub_service
+from services.finnhub_service import FinnhubRateLimitError, _call_with_retry
 from tests.conftest import MOCK_BASIC_FINANCIALS, MOCK_FINANCIALS_REPORTED, MOCK_QUOTE
 
 
@@ -21,7 +21,8 @@ def clear_cache():
 
 def test_build_metrics_extracts_plain_metric_fields(mocker):
     mocker.patch(
-        "finnhub_service.get_basic_financials", return_value=MOCK_BASIC_FINANCIALS
+        "services.finnhub_service.get_basic_financials",
+        return_value=MOCK_BASIC_FINANCIALS,
     )
 
     metrics = finnhub_service.build_metrics("AAPL")
@@ -34,7 +35,8 @@ def test_build_metrics_extracts_plain_metric_fields(mocker):
 
 def test_build_metrics_extracts_series_fields_as_value_and_date(mocker):
     mocker.patch(
-        "finnhub_service.get_basic_financials", return_value=MOCK_BASIC_FINANCIALS
+        "services.finnhub_service.get_basic_financials",
+        return_value=MOCK_BASIC_FINANCIALS,
     )
 
     metrics = finnhub_service.build_metrics("AAPL")
@@ -44,7 +46,7 @@ def test_build_metrics_extracts_series_fields_as_value_and_date(mocker):
 
 def test_build_metrics_returns_none_for_missing_series(mocker):
     empty = {"metric": {}, "series": {"quarterly": {}}}
-    mocker.patch("finnhub_service.get_basic_financials", return_value=empty)
+    mocker.patch("services.finnhub_service.get_basic_financials", return_value=empty)
 
     metrics = finnhub_service.build_metrics("AAPL")
 
@@ -57,7 +59,8 @@ def test_build_metrics_returns_none_for_missing_series(mocker):
 
 def test_build_reported_maps_bs_ic_cf(mocker):
     mocker.patch(
-        "finnhub_service.get_financials_reported", return_value=MOCK_FINANCIALS_REPORTED
+        "services.finnhub_service.get_financials_reported",
+        return_value=MOCK_FINANCIALS_REPORTED,
     )
 
     reported = finnhub_service.build_reported("AAPL")
@@ -68,7 +71,9 @@ def test_build_reported_maps_bs_ic_cf(mocker):
 
 
 def test_build_reported_returns_empty_lists_when_no_data(mocker):
-    mocker.patch("finnhub_service.get_financials_reported", return_value={"data": []})
+    mocker.patch(
+        "services.finnhub_service.get_financials_reported", return_value={"data": []}
+    )
 
     reported = finnhub_service.build_reported("AAPL")
 
@@ -102,7 +107,7 @@ def test_call_with_retry_returns_result_on_success():
 
 
 def test_call_with_retry_retries_on_429_and_succeeds(mocker):
-    mocker.patch("finnhub_service.time.sleep")
+    mocker.patch("services.finnhub_service.time.sleep")
     call_count = 0
 
     def fn():
@@ -120,7 +125,7 @@ def test_call_with_retry_retries_on_429_and_succeeds(mocker):
 
 
 def test_call_with_retry_raises_rate_limit_error_after_two_429s(mocker):
-    mocker.patch("finnhub_service.time.sleep")
+    mocker.patch("services.finnhub_service.time.sleep")
 
     with pytest.raises(FinnhubRateLimitError):
         _call_with_retry(
@@ -129,7 +134,7 @@ def test_call_with_retry_raises_rate_limit_error_after_two_429s(mocker):
 
 
 def test_call_with_retry_does_not_retry_non_429_exceptions(mocker):
-    sleep_mock = mocker.patch("finnhub_service.time.sleep")
+    sleep_mock = mocker.patch("services.finnhub_service.time.sleep")
     call_count = 0
 
     def fn():
@@ -144,7 +149,50 @@ def test_call_with_retry_does_not_retry_non_429_exceptions(mocker):
     sleep_mock.assert_not_called()
 
 
+def test_call_with_retry_reraises_non_429_from_second_call(mocker):
+    mocker.patch("services.finnhub_service.time.sleep")
+    call_count = 0
+
+    def fn():
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise Exception("429 Too Many Requests")
+        raise Exception("Server error on retry")
+
+    with pytest.raises(Exception, match="Server error on retry"):
+        _call_with_retry(fn)
+
+    assert call_count == 2
+
+
 # --- caching ---
+
+
+def test_get_basic_financials_caches_result(mocker):
+    mock_call = mocker.patch.object(
+        finnhub_service._client,
+        "company_basic_financials",
+        return_value=MOCK_BASIC_FINANCIALS,
+    )
+
+    finnhub_service.get_basic_financials("AAPL")
+    finnhub_service.get_basic_financials("AAPL")
+
+    mock_call.assert_called_once()
+
+
+def test_get_financials_reported_caches_result(mocker):
+    mock_call = mocker.patch.object(
+        finnhub_service._client,
+        "financials_reported",
+        return_value=MOCK_FINANCIALS_REPORTED,
+    )
+
+    finnhub_service.get_financials_reported("AAPL")
+    finnhub_service.get_financials_reported("AAPL")
+
+    mock_call.assert_called_once()
 
 
 def test_get_quote_cache_is_case_insensitive(mocker):

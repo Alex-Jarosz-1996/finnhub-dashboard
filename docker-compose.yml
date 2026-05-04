@@ -31,10 +31,16 @@ services:
         condition: service_healthy
       backend:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/quota/status"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   frontend:
     build: ./frontend
     ports:
       - "80:80"
     depends_on:
-      - gateway
+      gateway:
+        condition: service_healthy

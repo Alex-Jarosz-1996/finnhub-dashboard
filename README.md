@@ -174,7 +174,12 @@ npm run dev
 
 App: `http://localhost:5173`
 
-> The backend (port 8000) and gateway (port 8080) must both be running for API calls to work. The frontend dev server proxies `/api` to the gateway via `VITE_API_URL`.
+> The backend (port 8000) and gateway (port 8080) must both be running for API calls to work.
+>
+> Copy `frontend/.env.example` to `frontend/.env` to point the dev server at the gateway:
+> ```bash
+> cp frontend/.env.example frontend/.env
+> ```
 
 #### Tests
 

@@ -106,7 +106,7 @@ cd backend
 venv/bin/pytest tests/ -v
 ```
 
-25 tests across four files — no real Finnhub API calls are made:
+35 tests across four files — no real Finnhub API calls are made:
 
 | File | What it tests |
 |------|--------------|

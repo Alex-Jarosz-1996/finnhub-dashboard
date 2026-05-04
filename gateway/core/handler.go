@@ -47,7 +47,28 @@ func (g *Gateway) HandleAPI(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// --- Quota check ---
+	// --- Front door quota check (app-side limit, below the real API limit) ---
+	if rule.API != "" {
+		if q, ok := Quotas[rule.API]; ok && q.FrontDoorLimit > 0 {
+			used, err := g.Store.CheckFrontDoorQuota(ctx, rule.API, q.Window)
+			if err != nil {
+				log.Printf("front door quota check error for %s: %v", rule.API, err)
+			} else if used >= q.FrontDoorLimit {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusTooManyRequests)
+				json.NewEncoder(w).Encode(map[string]any{
+					"error":  "front door quota exhausted",
+					"api":    rule.API,
+					"used":   used,
+					"limit":  q.FrontDoorLimit,
+					"window": q.Window.String(),
+				})
+				return
+			}
+		}
+	}
+
+	// --- Real API quota check (hard ceiling imposed by the provider) ---
 	if rule.API != "" {
 		if q, ok := Quotas[rule.API]; ok {
 			used, err := g.Store.CheckQuota(ctx, rule.API, q.Window)
@@ -97,11 +118,16 @@ func NewProxy(target *url.URL, db *Store) *httputil.ReverseProxy {
 			return nil
 		}
 
-		// Increment quota counter for the external API this route uses.
+		// Increment both quota counters for the external API this route uses.
 		if rule.API != "" {
 			if q, ok := Quotas[rule.API]; ok {
 				if _, err := db.IncrQuota(ctx, rule.API, q.Window); err != nil {
 					log.Printf("quota increment error for %s: %v", rule.API, err)
+				}
+				if q.FrontDoorLimit > 0 {
+					if _, err := db.IncrFrontDoorQuota(ctx, rule.API, q.Window); err != nil {
+						log.Printf("front door quota increment error for %s: %v", rule.API, err)
+					}
 				}
 			}
 		}

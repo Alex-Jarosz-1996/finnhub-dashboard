@@ -4,26 +4,21 @@ import time
 import finnhub
 from dotenv import load_dotenv
 
-from core.cache import cache
-
 
 class FinnhubRateLimitError(Exception):
     pass
 
 
 def _call_with_retry(fn):
-    try:
-        return fn()
-    except Exception as e:
-        if "429" in str(e):
-            time.sleep(1)
-            try:
-                return fn()
-            except Exception as e2:
-                if "429" in str(e2):
-                    raise FinnhubRateLimitError("Finnhub rate limit exceeded") from e2
+    for _ in range(2):
+        try:
+            return fn()
+        except Exception as e:
+            if "429" not in str(e):
                 raise
-        raise
+            time.sleep(1)
+
+    raise FinnhubRateLimitError("Finnhub rate limit exceeded")
 
 
 load_dotenv()
@@ -36,30 +31,19 @@ _client = finnhub.Client(api_key=API_KEY)
 
 
 def get_quote(symbol: str) -> dict:
-    key = ("quote", symbol.upper())
-    if key not in cache:
-        cache[key] = _call_with_retry(lambda: _client.quote(symbol=symbol.upper()))
-    return cache[key]
+    return _call_with_retry(lambda: _client.quote(symbol=symbol.upper()))
 
 
 def get_basic_financials(symbol: str) -> dict:
-    key = ("basic_financials", symbol.upper())
-    if key not in cache:
-        cache[key] = _call_with_retry(
-            lambda: _client.company_basic_financials(
-                symbol=symbol.upper(), metric="all"
-            )
-        )
-    return cache[key]
+    return _call_with_retry(
+        lambda: _client.company_basic_financials(symbol=symbol.upper(), metric="all")
+    )
 
 
 def get_financials_reported(symbol: str) -> dict:
-    key = ("financials_reported", symbol.upper())
-    if key not in cache:
-        cache[key] = _call_with_retry(
-            lambda: _client.financials_reported(symbol=symbol.upper(), freq="annual")
-        )
-    return cache[key]
+    return _call_with_retry(
+        lambda: _client.financials_reported(symbol=symbol.upper(), freq="annual")
+    )
 
 
 def build_metrics(symbol: str) -> dict:

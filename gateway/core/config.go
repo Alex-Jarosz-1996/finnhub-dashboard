@@ -2,10 +2,15 @@ package core
 
 import "time"
 
-// ApiQuota defines the rate limit for a single external API.
+// ApiQuota defines the rate limits for a single external API.
+// Limit is the hard ceiling imposed by the API provider.
+// FrontDoorLimit is the app-side limit, set below Limit to create a safety
+// buffer — the gateway stops accepting requests for this API before the real
+// quota is exhausted.
 type ApiQuota struct {
-	Limit  int64
-	Window time.Duration
+	Limit          int64
+	FrontDoorLimit int64
+	Window         time.Duration
 }
 
 // RouteRule maps a URL path prefix to the external API it calls and how long
@@ -18,10 +23,10 @@ type RouteRule struct {
 
 // Quotas defines the free-tier limits for each external API.
 var Quotas = map[string]ApiQuota{
-	"finnhub":   {Limit: 30, Window: time.Second},
-	"fmp":       {Limit: 250, Window: 24 * time.Hour},
-	"stockdata": {Limit: 100, Window: 24 * time.Hour},
-	"massive":   {Limit: 5, Window: time.Minute},
+	"finnhub":   {Limit: 30, FrontDoorLimit: 25, Window: time.Second},
+	"fmp":       {Limit: 250, FrontDoorLimit: 200, Window: 24 * time.Hour},
+	"stockdata": {Limit: 100, FrontDoorLimit: 80, Window: 24 * time.Hour},
+	"massive":   {Limit: 5, FrontDoorLimit: 4, Window: time.Minute},
 }
 
 // routeRules maps path prefixes to their RouteRule. Evaluated in order so

@@ -1,20 +1,8 @@
 import pytest
 
-from core.cache import cache
 from services import finnhub_service
 from services.finnhub_service import FinnhubRateLimitError, _call_with_retry
 from tests.conftest import MOCK_BASIC_FINANCIALS, MOCK_FINANCIALS_REPORTED, MOCK_QUOTE
-
-
-@pytest.fixture(autouse=True)
-def clear_cache():
-    """
-    Clear the TTL cache before every test so cached values don't bleed between tests.
-    """
-    cache.clear()
-    yield
-    cache.clear()
-
 
 # --- build_metrics ---
 
@@ -82,20 +70,6 @@ def test_build_reported_returns_empty_lists_when_no_data(mocker):
         "incomeStatement": [],
         "cashFlowStatement": [],
     }
-
-
-# --- caching ---
-
-
-def test_get_quote_caches_result(mocker):
-    mock_call = mocker.patch.object(
-        finnhub_service._client, "quote", return_value=MOCK_QUOTE
-    )
-
-    finnhub_service.get_quote("AAPL")
-    finnhub_service.get_quote("AAPL")
-
-    mock_call.assert_called_once()
 
 
 # --- _call_with_retry ---
@@ -166,41 +140,35 @@ def test_call_with_retry_reraises_non_429_from_second_call(mocker):
     assert call_count == 2
 
 
-# --- caching ---
+def test_get_quote_uppercases_symbol(mocker):
+    mock_call = mocker.patch.object(
+        finnhub_service._client, "quote", return_value=MOCK_QUOTE
+    )
+
+    finnhub_service.get_quote("aapl")
+
+    mock_call.assert_called_once_with(symbol="AAPL")
 
 
-def test_get_basic_financials_caches_result(mocker):
+def test_get_basic_financials_uppercases_symbol(mocker):
     mock_call = mocker.patch.object(
         finnhub_service._client,
         "company_basic_financials",
         return_value=MOCK_BASIC_FINANCIALS,
     )
 
-    finnhub_service.get_basic_financials("AAPL")
-    finnhub_service.get_basic_financials("AAPL")
+    finnhub_service.get_basic_financials("aapl")
 
-    mock_call.assert_called_once()
+    mock_call.assert_called_once_with(symbol="AAPL", metric="all")
 
 
-def test_get_financials_reported_caches_result(mocker):
+def test_get_financials_reported_uppercases_symbol(mocker):
     mock_call = mocker.patch.object(
         finnhub_service._client,
         "financials_reported",
         return_value=MOCK_FINANCIALS_REPORTED,
     )
 
-    finnhub_service.get_financials_reported("AAPL")
-    finnhub_service.get_financials_reported("AAPL")
+    finnhub_service.get_financials_reported("aapl")
 
-    mock_call.assert_called_once()
-
-
-def test_get_quote_cache_is_case_insensitive(mocker):
-    mock_call = mocker.patch.object(
-        finnhub_service._client, "quote", return_value=MOCK_QUOTE
-    )
-
-    finnhub_service.get_quote("aapl")
-    finnhub_service.get_quote("AAPL")
-
-    mock_call.assert_called_once()
+    mock_call.assert_called_once_with(symbol="AAPL", freq="annual")

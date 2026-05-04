@@ -150,3 +150,113 @@ func TestHandleAPI_UnknownPath(t *testing.T) {
 		t.Errorf("status=%d, want 200", w.Code)
 	}
 }
+
+// --- Front door quota handler tests ---
+
+func TestHandleAPI_FrontDoorQuotaExceeded(t *testing.T) {
+	gw, _ := newTestGateway(t)
+	ctx := context.Background()
+
+	// Exhaust the FMP front door quota (200), leaving real quota (250) intact.
+	q := core.Quotas["fmp"]
+	for i := int64(0); i < q.FrontDoorLimit; i++ {
+		gw.Store.IncrFrontDoorQuota(ctx, "fmp", q.Window)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/chart/eod/AAPL", nil)
+	w := httptest.NewRecorder()
+	gw.HandleAPI(w, req)
+
+	if w.Code != http.StatusTooManyRequests {
+		t.Errorf("status=%d, want 429", w.Code)
+	}
+
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body["error"] != "front door quota exhausted" {
+		t.Errorf("error=%v, want 'front door quota exhausted'", body["error"])
+	}
+	if body["api"] != "fmp" {
+		t.Errorf("api=%v, want fmp", body["api"])
+	}
+}
+
+func TestHandleAPI_FrontDoorBlocksBeforeRealQuota(t *testing.T) {
+	gw, _ := newTestGateway(t)
+	ctx := context.Background()
+
+	q := core.Quotas["fmp"]
+
+	// Exhaust only the front door quota; real quota has headroom.
+	for i := int64(0); i < q.FrontDoorLimit; i++ {
+		gw.Store.IncrFrontDoorQuota(ctx, "fmp", q.Window)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/chart/eod/AAPL", nil)
+	w := httptest.NewRecorder()
+	gw.HandleAPI(w, req)
+
+	// Should be blocked by front door, not by real quota.
+	if w.Code != http.StatusTooManyRequests {
+		t.Errorf("status=%d, want 429", w.Code)
+	}
+
+	var body map[string]any
+	json.Unmarshal(w.Body.Bytes(), &body)
+	if body["error"] != "front door quota exhausted" {
+		t.Errorf("expected front door error, got: %v", body["error"])
+	}
+
+	// Verify real quota is untouched.
+	realUsed, _ := gw.Store.CheckQuota(ctx, "fmp", q.Window)
+	if realUsed != 0 {
+		t.Errorf("real quota should be 0 (front door blocked first), got %d", realUsed)
+	}
+}
+
+func TestHandleAPI_BothQuotasIncrementedOnSuccess(t *testing.T) {
+	gw, _ := newTestGateway(t)
+	ctx := context.Background()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/chart/eod/AAPL", nil)
+	gw.HandleAPI(httptest.NewRecorder(), req)
+
+	q := core.Quotas["fmp"]
+	real, _ := gw.Store.CheckQuota(ctx, "fmp", q.Window)
+	fd, _ := gw.Store.CheckFrontDoorQuota(ctx, "fmp", q.Window)
+
+	if real != 1 {
+		t.Errorf("real quota=%d, want 1", real)
+	}
+	if fd != 1 {
+		t.Errorf("front door quota=%d, want 1", fd)
+	}
+}
+
+func TestHandleAPI_CacheBypassesFrontDoorQuota(t *testing.T) {
+	gw, _ := newTestGateway(t)
+	ctx := context.Background()
+
+	// Pre-populate the cache.
+	gw.Store.SetCache(ctx, "/api/chart/eod/AAPL", "", `{"data":"cached"}`, time.Hour)
+
+	// Exhaust the front door quota.
+	q := core.Quotas["fmp"]
+	for i := int64(0); i < q.FrontDoorLimit; i++ {
+		gw.Store.IncrFrontDoorQuota(ctx, "fmp", q.Window)
+	}
+
+	// Cache hit should still return 200.
+	req := httptest.NewRequest(http.MethodGet, "/api/chart/eod/AAPL", nil)
+	w := httptest.NewRecorder()
+	gw.HandleAPI(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status=%d, want 200 (cache hit should bypass front door quota)", w.Code)
+	}
+	if w.Header().Get("X-Cache") != "HIT" {
+		t.Error("expected X-Cache: HIT")
+	}
+}

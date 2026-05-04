@@ -25,6 +25,8 @@ func (s *Store) Ping(ctx context.Context) error {
 	return s.rdb.Ping(ctx).Err()
 }
 
+// --- Response cache ---
+
 // CacheKey returns the Redis key for a cached API response.
 func CacheKey(path, query string) string {
 	if query != "" {
@@ -51,57 +53,92 @@ func (s *Store) SetCache(ctx context.Context, path, query, body string, ttl time
 	return s.rdb.Set(ctx, CacheKey(path, query), body, ttl).Err()
 }
 
-// QuotaKey returns the Redis key for an API's quota counter within the current
-// window. Daily quotas are keyed by date; per-minute by date+hour+minute.
-func QuotaKey(api string, window time.Duration) string {
+// --- Quota tracking (shared internals) ---
+
+// buildQuotaKey constructs a Redis key scoped to a time window.
+// prefix distinguishes real quota keys ("quota") from front door keys ("quotafd").
+func buildQuotaKey(prefix, api string, window time.Duration) string {
 	now := time.Now().UTC()
 	switch {
 	case window >= 24*time.Hour:
-		return fmt.Sprintf("quota:%s:%s", api, now.Format("2006-01-02"))
+		return fmt.Sprintf("%s:%s:%s", prefix, api, now.Format("2006-01-02"))
 	case window >= time.Minute:
-		return fmt.Sprintf("quota:%s:%s", api, now.Format("2006-01-02T15:04"))
+		return fmt.Sprintf("%s:%s:%s", prefix, api, now.Format("2006-01-02T15:04"))
 	default:
-		return fmt.Sprintf("quota:%s:%s", api, now.Format("2006-01-02T15:04:05"))
+		return fmt.Sprintf("%s:%s:%s", prefix, api, now.Format("2006-01-02T15:04:05"))
 	}
 }
 
-// CheckQuota returns the current usage count for an API within its window.
-// Returns 0 if no calls have been made yet.
-func (s *Store) CheckQuota(ctx context.Context, api string, window time.Duration) (int64, error) {
-	val, err := s.rdb.Get(ctx, QuotaKey(api, window)).Int64()
+func (s *Store) checkQuotaByKey(ctx context.Context, key string) (int64, error) {
+	val, err := s.rdb.Get(ctx, key).Int64()
 	if err == redis.Nil {
 		return 0, nil
 	}
 	return val, err
 }
 
-// IncrQuota increments the quota counter for an API and sets the TTL on first
-// use so the counter resets naturally at the end of the window. Returns the
-// new count.
-func (s *Store) IncrQuota(ctx context.Context, api string, window time.Duration) (int64, error) {
-	key := QuotaKey(api, window)
+func (s *Store) incrQuotaByKey(ctx context.Context, key string, window time.Duration) (int64, error) {
 	count, err := s.rdb.Incr(ctx, key).Result()
 	if err != nil {
 		return 0, err
 	}
 	// Set expiry only on first increment. A small buffer prevents the key from
-	// expiring in the middle of its window due to clock skew.
+	// expiring mid-window due to clock skew.
 	if count == 1 {
 		s.rdb.Expire(ctx, key, window+window/10)
 	}
 	return count, nil
 }
 
-// AllQuotaStatus returns the current usage for every tracked API as a map of
-// api → { "used", "limit", "window" }.
+// --- Real API quota (tracks against the provider's hard limit) ---
+
+// QuotaKey returns the Redis key for an API's real quota counter.
+func QuotaKey(api string, window time.Duration) string {
+	return buildQuotaKey("quota", api, window)
+}
+
+// CheckQuota returns the current real quota usage for an API.
+func (s *Store) CheckQuota(ctx context.Context, api string, window time.Duration) (int64, error) {
+	return s.checkQuotaByKey(ctx, QuotaKey(api, window))
+}
+
+// IncrQuota increments the real quota counter and returns the new count.
+func (s *Store) IncrQuota(ctx context.Context, api string, window time.Duration) (int64, error) {
+	return s.incrQuotaByKey(ctx, QuotaKey(api, window), window)
+}
+
+// --- Front door quota (app-side limit, below the real API limit) ---
+
+// FrontDoorQuotaKey returns the Redis key for an API's front door quota counter.
+func FrontDoorQuotaKey(api string, window time.Duration) string {
+	return buildQuotaKey("quotafd", api, window)
+}
+
+// CheckFrontDoorQuota returns the current front door quota usage for an API.
+func (s *Store) CheckFrontDoorQuota(ctx context.Context, api string, window time.Duration) (int64, error) {
+	return s.checkQuotaByKey(ctx, FrontDoorQuotaKey(api, window))
+}
+
+// IncrFrontDoorQuota increments the front door quota counter and returns the new count.
+func (s *Store) IncrFrontDoorQuota(ctx context.Context, api string, window time.Duration) (int64, error) {
+	return s.incrQuotaByKey(ctx, FrontDoorQuotaKey(api, window), window)
+}
+
+// --- Status ---
+
+// AllQuotaStatus returns usage for every tracked API including both front door
+// and real quota counters.
 func (s *Store) AllQuotaStatus(ctx context.Context) map[string]map[string]any {
 	result := make(map[string]map[string]any, len(Quotas))
 	for api, q := range Quotas {
-		used, _ := s.CheckQuota(ctx, api, q.Window)
+		realUsed, _ := s.CheckQuota(ctx, api, q.Window)
+		fdUsed, _ := s.CheckFrontDoorQuota(ctx, api, q.Window)
 		result[api] = map[string]any{
-			"used":   used,
-			"limit":  q.Limit,
-			"window": q.Window.String(),
+			"used":           realUsed,
+			"limit":          q.Limit,
+			"frontDoorUsed":  fdUsed,
+			"frontDoorLimit": q.FrontDoorLimit,
+			"window":         q.Window.String(),
 		}
 	}
 	return result

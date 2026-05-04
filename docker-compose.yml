@@ -1,13 +1,40 @@
 services:
+  redis:
+    image: redis:7-alpine
+    expose:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   backend:
     build: ./backend
     env_file: ./backend/.env
     expose:
       - "8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  gateway:
+    build: ./gateway
+    expose:
+      - "8080"
+    environment:
+      - FASTAPI_URL=http://backend:8000
+      - BACKTEST_URL=http://backtest:8090
+      - REDIS_URL=redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_started
 
   frontend:
     build: ./frontend
     ports:
       - "80:80"
     depends_on:
-      - backend
+      - gateway

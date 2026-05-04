@@ -1,6 +1,13 @@
 # finnhub-dashboard
 
-A stock financial dashboard SPA. FastAPI backend + React frontend.
+A stock financial dashboard SPA. FastAPI backend + React frontend, with a Go API gateway (quota tracking + Redis caching) sitting between the browser and the backend.
+
+**Request flow:**
+```
+Browser → Nginx :80 → Go Gateway :8080 → FastAPI :8000 → Finnhub / FMP / StockData / Massive
+                             ↕
+                           Redis
+```
 
 ---
 
@@ -8,7 +15,7 @@ A stock financial dashboard SPA. FastAPI backend + React frontend.
 
 ### Prerequisites
 
-Ensure `backend/.env` exists with your Finnhub API key and auth credentials:
+Ensure `backend/.env` exists with your API keys and auth credentials:
 
 ```
 FINNHUB_API_KEY=your_api_key_here
@@ -25,9 +32,14 @@ JWT_SECRET=a_long_random_string
 docker compose up --build
 ```
 
-App: `http://localhost`
+This starts five services: `nginx`, `gateway`, `backend`, `redis`, and `frontend`. No extra configuration needed — Redis and the gateway are wired together automatically.
 
-The frontend is served by nginx on port 80. All `/api` requests are proxied internally to the backend — port 8000 is not exposed to the host.
+| URL | What |
+|-----|------|
+| `http://localhost` | App |
+| `http://localhost/api/quota/status` | Live API quota usage (JSON) |
+
+No backend ports are exposed to the host — all traffic enters through nginx on port 80.
 
 ### Stop
 
@@ -44,6 +56,20 @@ docker compose up --build
 ---
 
 ## Local development (without Docker)
+
+Running without Docker requires three terminals: one each for the backend, gateway, and frontend. Redis must also be running locally.
+
+### Redis
+
+```bash
+# macOS
+brew install redis && brew services start redis
+
+# Linux
+sudo apt install redis-server && sudo systemctl start redis
+```
+
+Redis listens on `localhost:6379` by default — no configuration needed.
 
 ### Backend
 
@@ -89,10 +115,43 @@ venv/bin/pytest tests/ -v
 | `tests/test_financials.py` | `GET /api/financials/{symbol}` — shape, groups, 404, 502, 403 without token |
 | `tests/test_finnhub_service.py` | Service functions and TTL cache behaviour |
 
+#### Lint and type check
+
+```bash
+cd backend
+venv/bin/ruff check .
+venv/bin/mypy .
+```
+
 #### Kill a stale process on port 8000
 
 ```bash
 fuser -k 8000/tcp
+```
+
+---
+
+### Go gateway
+
+#### Setup
+
+Go 1.21+ required. Dependencies are fetched automatically on first build.
+
+#### Run
+
+```bash
+cd gateway
+FASTAPI_URL=http://localhost:8000 REDIS_URL=localhost:6379 go run .
+```
+
+Gateway listens on `:8080`. The backend must be running first.
+
+Quota status: `http://localhost:8080/api/quota/status`
+
+#### Kill a stale process on port 8080
+
+```bash
+fuser -k 8080/tcp
 ```
 
 ---
@@ -115,7 +174,7 @@ npm run dev
 
 App: `http://localhost:5173`
 
-> The backend must also be running on port 8000 for API calls to work.
+> The backend (port 8000) and gateway (port 8080) must both be running for API calls to work. The frontend dev server proxies `/api` to the gateway via `VITE_API_URL`.
 
 #### Tests
 
@@ -145,14 +204,51 @@ npm run test:watch
 
 ---
 
+### Go gateway
+
+The gateway has its own Go module and must be tested from inside its directory. No real Redis required — tests use an in-memory miniredis server.
+
+#### Tests
+
+```bash
+cd gateway
+go test ./tests/...
+```
+
+With verbose output:
+
+```bash
+cd gateway
+go test ./tests/... -v
+```
+
+To run a single test:
+
+```bash
+cd gateway
+go test ./tests/... -run TestHandleAPI_CacheHit -v
+```
+
+17 tests across three files:
+
+| File | What it tests |
+|------|--------------|
+| `tests/config_test.go` | `RuleFor()` maps every route prefix to the correct API and cache TTL |
+| `tests/cache_test.go` | Redis cache get/set/expiry, quota increment/check/expiry, `AllQuotaStatus` |
+| `tests/handler_test.go` | Proxy passthrough, cache hit/miss, 429 on quota exhausted, cache bypasses quota, auth passthrough |
+
+---
+
 ## API Reference
+
+All examples use `http://localhost/api` (Docker, through nginx → gateway → backend). For local dev without Docker use `http://localhost:8080/api` (gateway → backend directly).
 
 ### `POST /api/auth/login`
 
 Authenticates with the shared password and returns a JWT valid for 24 hours.
 
 ```bash
-curl -X POST http://localhost:8000/api/auth/login \
+curl -X POST http://localhost/api/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"password": "your_password"}'
 ```
@@ -170,7 +266,7 @@ All other API endpoints require `Authorization: Bearer <token>`.
 Returns the current day's price data for a given ticker.
 
 ```bash
-curl http://localhost:8000/api/quote/AAPL
+curl http://localhost/api/quote/AAPL
 ```
 
 ```json
@@ -190,7 +286,7 @@ curl http://localhost:8000/api/quote/AAPL
 Returns grouped financial metrics and reported financials (balance sheet, income statement, cash flow statement) for a given ticker.
 
 ```bash
-curl http://localhost:8000/api/financials/AAPL
+curl http://localhost/api/financials/AAPL
 ```
 
 ```json

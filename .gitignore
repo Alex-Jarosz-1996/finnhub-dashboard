@@ -21,6 +21,10 @@ node_modules/
 dist/
 .vite/
 
+# Go binaries
+gateway/gateway
+backtest/backtest
+
 # Docker
 *.log
 

@@ -1,0 +1,57 @@
+package core
+
+import "time"
+
+// ApiQuota defines the rate limit for a single external API.
+type ApiQuota struct {
+	Limit  int64
+	Window time.Duration
+}
+
+// RouteRule maps a URL path prefix to the external API it calls and how long
+// its responses should be cached. An empty API means no quota is tracked.
+// A zero CacheTTL means the response is not cached.
+type RouteRule struct {
+	API      string
+	CacheTTL time.Duration
+}
+
+// Quotas defines the free-tier limits for each external API.
+var Quotas = map[string]ApiQuota{
+	"finnhub":   {Limit: 30, Window: time.Second},
+	"fmp":       {Limit: 250, Window: 24 * time.Hour},
+	"stockdata": {Limit: 100, Window: 24 * time.Hour},
+	"massive":   {Limit: 5, Window: time.Minute},
+}
+
+// routeRules maps path prefixes to their RouteRule. Evaluated in order so
+// more specific prefixes must appear before shorter ones.
+var routeRules = []struct {
+	prefix string
+	rule   RouteRule
+}{
+	{"/api/chart/eod/", RouteRule{API: "fmp", CacheTTL: 24 * time.Hour}},
+	{"/api/chart/intraday/", RouteRule{API: "stockdata", CacheTTL: 5 * time.Minute}},
+	{"/api/options/", RouteRule{API: "massive", CacheTTL: 5 * time.Minute}},
+	{"/api/quote/", RouteRule{API: "finnhub", CacheTTL: 15 * time.Minute}},
+	{"/api/financials/", RouteRule{API: "finnhub", CacheTTL: 15 * time.Minute}},
+	// AI chat: no quota (Gemini free tier is generous), no cache (responses are dynamic)
+	{"/api/chat", RouteRule{API: "", CacheTTL: 0}},
+	// Auth: no quota, no cache
+	{"/api/auth/", RouteRule{API: "", CacheTTL: 0}},
+}
+
+// RuleFor returns the RouteRule for the given request path, and whether a
+// matching rule was found.
+func RuleFor(path string) (RouteRule, bool) {
+	for _, entry := range routeRules {
+		if len(path) >= len(entry.prefix) && path[:len(entry.prefix)] == entry.prefix {
+			return entry.rule, true
+		}
+		// exact match (e.g. /api/chat has no trailing slash)
+		if path == entry.prefix {
+			return entry.rule, true
+		}
+	}
+	return RouteRule{}, false
+}

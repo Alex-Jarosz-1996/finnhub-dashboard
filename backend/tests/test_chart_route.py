@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from tests.conftest import MOCK_FMP_EOD, MOCK_STOCKDATA_INTRADAY
+from tests.conftest import MOCK_FMP_EOD, MOCK_FMP_EOD_FULL, MOCK_STOCKDATA_INTRADAY
 
 # --- GET /api/chart/eod/{symbol} ---
 
@@ -100,6 +100,62 @@ def test_get_eod_chart_bubbles_up_503(client: TestClient, auth_headers, mocker):
     response = client.get("/api/chart/eod/AAPL", headers=auth_headers)
 
     assert response.status_code == 503
+
+
+# --- GET /api/chart/eod-candle/{symbol} ---
+
+
+def test_get_eod_candle_chart_returns_200_with_correct_shape(
+    client: TestClient, auth_headers, mocker
+):
+    mocker.patch(
+        "services.chart_service.get_eod_candle",
+        return_value={"symbol": "AAPL", "range": "1y", "data": MOCK_FMP_EOD_FULL},
+    )
+
+    response = client.get("/api/chart/eod-candle/AAPL", headers=auth_headers)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["symbol"] == "AAPL"
+    assert body["range"] == "1y"
+    assert isinstance(body["data"], list)
+    assert body["data"][0]["open"] == 187.15
+    assert body["data"][0]["close"] == 185.92
+
+
+def test_get_eod_candle_chart_returns_403_without_token(client: TestClient, mocker):
+    mocker.patch("services.chart_service.get_eod_candle", return_value={})
+
+    response = client.get("/api/chart/eod-candle/AAPL")
+
+    assert response.status_code == 403
+
+
+def test_get_eod_candle_chart_invalid_range_falls_back_to_1y(
+    client: TestClient, auth_headers, mocker
+):
+    spy = mocker.patch(
+        "services.chart_service.get_eod_candle",
+        return_value={"symbol": "AAPL", "range": "1y", "data": MOCK_FMP_EOD_FULL},
+    )
+
+    client.get("/api/chart/eod-candle/AAPL?rng=bad_range", headers=auth_headers)
+
+    spy.assert_called_once_with("AAPL", "1y")
+
+
+def test_get_eod_candle_chart_bubbles_up_404(client: TestClient, auth_headers, mocker):
+    from fastapi import HTTPException
+
+    mocker.patch(
+        "services.chart_service.get_eod_candle",
+        side_effect=HTTPException(status_code=404, detail="No data"),
+    )
+
+    response = client.get("/api/chart/eod-candle/ZZZZZ", headers=auth_headers)
+
+    assert response.status_code == 404
 
 
 # --- GET /api/chart/intraday/{symbol} ---

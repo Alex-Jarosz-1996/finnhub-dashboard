@@ -35,6 +35,7 @@ var routeRules = []struct {
 	prefix string
 	rule   RouteRule
 }{
+	{"/api/chart/eod-candle/", RouteRule{API: "fmp", CacheTTL: 24 * time.Hour}},
 	{"/api/chart/eod/", RouteRule{API: "fmp", CacheTTL: 24 * time.Hour}},
 	{"/api/chart/intraday/", RouteRule{API: "stockdata", CacheTTL: 5 * time.Minute}},
 	{"/api/options/", RouteRule{API: "massive", CacheTTL: 5 * time.Minute}},

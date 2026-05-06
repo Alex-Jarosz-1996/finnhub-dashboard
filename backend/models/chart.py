@@ -26,3 +26,9 @@ class IntradayResponse(BaseModel):
     symbol: str
     interval: str
     data: list[OHLCVPoint]
+
+
+class CandleResponse(BaseModel):
+    symbol: str
+    range: str
+    data: list[OHLCVPoint]

@@ -15,6 +15,7 @@ func TestRuleFor(t *testing.T) {
 		wantMatched bool
 	}{
 		{"/api/chart/eod/AAPL", "fmp", 24 * time.Hour, true},
+		{"/api/chart/eod-candle/AAPL", "fmp", 24 * time.Hour, true},
 		{"/api/chart/intraday/AAPL", "stockdata", 5 * time.Minute, true},
 		{"/api/options/AAPL", "massive", 5 * time.Minute, true},
 		{"/api/quote/AAPL", "finnhub", 15 * time.Minute, true},

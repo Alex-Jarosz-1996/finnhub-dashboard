@@ -32,6 +32,11 @@ export const getEODChart = (symbol, token, range = '1y') =>
     headers: authHeaders(token),
   }).then(handle)
 
+export const getCandlestickChart = (symbol, token, range = '1y') =>
+  fetch(`${BASE}/chart/eod-candle/${symbol.toUpperCase()}?rng=${range}`, {
+    headers: authHeaders(token),
+  }).then(handle)
+
 export const getIntradayChart = (symbol, token, interval = '5min') =>
   fetch(`${BASE}/chart/intraday/${symbol.toUpperCase()}?interval=${interval}`, {
     headers: authHeaders(token),

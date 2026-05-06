@@ -112,6 +112,27 @@ MOCK_FMP_EOD = [
     {"symbol": "AAPL", "date": "2024-01-02", "price": 187.0, "volume": 50000000},
 ]
 
+MOCK_FMP_EOD_FULL = [
+    {
+        "symbol": "AAPL",
+        "date": "2024-01-03",
+        "open": 187.15,
+        "high": 188.44,
+        "low": 183.39,
+        "close": 185.92,
+        "volume": 72233800,
+    },
+    {
+        "symbol": "AAPL",
+        "date": "2024-01-02",
+        "open": 185.52,
+        "high": 186.74,
+        "low": 183.43,
+        "close": 185.64,
+        "volume": 46278600,
+    },
+]
+
 MOCK_STOCKDATA_INTRADAY = {
     "data": [
         {

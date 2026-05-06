@@ -2,7 +2,7 @@ import httpx
 import pytest
 
 from services import chart_service
-from tests.conftest import MOCK_FMP_EOD, MOCK_STOCKDATA_INTRADAY
+from tests.conftest import MOCK_FMP_EOD, MOCK_FMP_EOD_FULL, MOCK_STOCKDATA_INTRADAY
 
 # --- get_eod ---
 
@@ -179,6 +179,99 @@ def test_get_eod_raises_503_on_network_error(respx_mock):
 
     with pytest.raises(HTTPException) as exc_info:
         chart_service.get_eod("AAPL")
+
+    assert exc_info.value.status_code == 503
+
+
+# --- get_eod_candle ---
+
+
+def test_get_eod_candle_normalises_response(respx_mock):
+    respx_mock.get(chart_service._FMP_EOD_FULL_URL).mock(
+        return_value=httpx.Response(200, json=MOCK_FMP_EOD_FULL)
+    )
+
+    result = chart_service.get_eod_candle("aapl", "1y")
+
+    assert result["symbol"] == "AAPL"
+    assert result["range"] == "1y"
+    # sorted ascending; oldest entry first
+    assert result["data"][0]["date"] == "2024-01-02"
+    assert result["data"][0]["open"] == 185.52
+    assert result["data"][0]["close"] == 185.64
+    assert "price" not in result["data"][0]
+
+
+def test_get_eod_candle_returns_chronological_order(respx_mock):
+    respx_mock.get(chart_service._FMP_EOD_FULL_URL).mock(
+        return_value=httpx.Response(200, json=MOCK_FMP_EOD_FULL)
+    )
+
+    result = chart_service.get_eod_candle("AAPL")
+
+    dates = [row["date"] for row in result["data"]]
+    assert dates == sorted(dates)
+
+
+def test_get_eod_candle_slices_to_requested_range(respx_mock):
+    many_days = [
+        {
+            "symbol": "AAPL",
+            "date": f"2024-01-{i:02d}",
+            "open": 150.0,
+            "high": 152.0,
+            "low": 149.0,
+            "close": 151.0,
+            "volume": 1000000,
+        }
+        for i in range(10, 0, -1)
+    ]
+    respx_mock.get(chart_service._FMP_EOD_FULL_URL).mock(
+        return_value=httpx.Response(200, json=many_days)
+    )
+
+    result = chart_service.get_eod_candle("AAPL", "1w")
+
+    assert len(result["data"]) == 7
+    assert result["data"][0]["date"] == "2024-01-04"
+    assert result["data"][-1]["date"] == "2024-01-10"
+
+
+def test_get_eod_candle_raises_404_on_empty_response(respx_mock):
+    from fastapi import HTTPException
+
+    respx_mock.get(chart_service._FMP_EOD_FULL_URL).mock(
+        return_value=httpx.Response(200, json=[])
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        chart_service.get_eod_candle("ZZZZZ")
+
+    assert exc_info.value.status_code == 404
+
+
+def test_get_eod_candle_raises_502_on_upstream_error(respx_mock):
+    from fastapi import HTTPException
+
+    respx_mock.get(chart_service._FMP_EOD_FULL_URL).mock(
+        return_value=httpx.Response(500, json={"error": "internal"})
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        chart_service.get_eod_candle("AAPL")
+
+    assert exc_info.value.status_code == 502
+
+
+def test_get_eod_candle_raises_503_on_network_error(respx_mock):
+    from fastapi import HTTPException
+
+    respx_mock.get(chart_service._FMP_EOD_FULL_URL).mock(
+        side_effect=httpx.ConnectError("unreachable")
+    )
+
+    with pytest.raises(HTTPException) as exc_info:
+        chart_service.get_eod_candle("AAPL")
 
     assert exc_info.value.status_code == 503
 

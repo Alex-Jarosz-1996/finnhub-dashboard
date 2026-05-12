@@ -9,6 +9,7 @@ import ReportedFinancials from './components/SingleView/ReportedFinancials.jsx'
 import CompareSearchBar from './components/CompareView/CompareSearchBar.jsx'
 import CompareTable from './components/CompareView/CompareTable.jsx'
 import StockChart from './components/Chart/StockChart.jsx'
+import OptionsChain from './components/OptionsChain/OptionsChain.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 
 const MAX_COMPARE = 10
@@ -68,6 +69,7 @@ export default function App() {
   const [financials, setFinancials] = useState(null)
 
   const [chartSymbol, setChartSymbol] = useState(null)
+  const [optionsSymbol, setOptionsSymbol] = useState(null)
 
   const [compareTickers, setCompareTickers] = useState(() => {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [] }
@@ -144,7 +146,7 @@ export default function App() {
       </div>
 
       <div className={styles.tabs}>
-        {[['single', 'Ticker'], ['compare', 'Compare'], ['chart', 'Chart']].map(([key, label]) => (
+        {[['single', 'Ticker'], ['compare', 'Compare'], ['chart', 'Chart'], ['options', 'Options']].map(([key, label]) => (
           <button
             key={key}
             className={`${styles.tab} ${tab === key ? styles.tabActive : ''}`}
@@ -181,6 +183,16 @@ export default function App() {
           {chartSymbol
             ? <StockChart symbol={chartSymbol} token={token} />
             : <div className={styles.empty}>Search for a ticker to view its chart.</div>
+          }
+        </div>
+      )}
+
+      {tab === 'options' && (
+        <div>
+          <SearchBar onSearch={setOptionsSymbol} />
+          {optionsSymbol
+            ? <OptionsChain symbol={optionsSymbol} token={token} onUnauthorized={handle401} />
+            : <div className={styles.empty}>Search for a ticker to view its options chain.</div>
           }
         </div>
       )}

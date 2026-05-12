@@ -9,6 +9,7 @@ from middleware.cors import register_cors
 from routes.auth import router as auth_router
 from routes.chart import router as chart_router
 from routes.financials import router as financials_router
+from routes.options import router as options_router
 from routes.quote import router as quote_router
 
 logging.basicConfig(
@@ -26,6 +27,7 @@ app.include_router(auth_router)
 app.include_router(quote_router)
 app.include_router(financials_router)
 app.include_router(chart_router)
+app.include_router(options_router)
 
 
 @app.get("/health", status_code=status.HTTP_200_OK)

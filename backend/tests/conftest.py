@@ -7,6 +7,7 @@ os.environ.setdefault("JWT_SECRET", "test_jwt_secret")
 os.environ.setdefault("APP_PASSWORD", "test_password")
 os.environ.setdefault("FMP_API_KEY", "test_fmp_key")
 os.environ.setdefault("STOCKDATA_API_KEY", "test_stockdata_key")
+os.environ.setdefault("MASSIVE_API_KEY", "test_massive_key")
 
 import jwt
 import pytest

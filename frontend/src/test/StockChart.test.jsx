@@ -14,7 +14,7 @@ const MOCK_EOD = {
 
 const MOCK_INTRADAY = {
   symbol: 'AAPL',
-  interval: '5min',
+  interval: 'minute',
   data: [
     { date: '2024-01-03T10:00:00', open: 187.0, high: 188.5, low: 186.5, close: 188.0, volume: 1200000 },
     { date: '2024-01-03T10:05:00', open: 188.0, high: 189.0, low: 187.5, close: 188.5, volume: 900000 },
@@ -60,7 +60,7 @@ describe('StockChart', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /intraday/i }))
 
-    await waitFor(() => expect(intradaySpy).toHaveBeenCalledWith('AAPL', 'tok', '5min'))
+    await waitFor(() => expect(intradaySpy).toHaveBeenCalledWith('AAPL', 'tok', 'minute'))
   })
 
   it('calls refresh when refresh button is clicked', async () => {
@@ -114,13 +114,13 @@ describe('StockChart', () => {
 
     // Switch to intraday first
     fireEvent.click(screen.getByRole('button', { name: /intraday/i }))
-    await waitFor(() => expect(intradaySpy).toHaveBeenCalledWith('AAPL', 'tok', '5min'))
+    await waitFor(() => expect(intradaySpy).toHaveBeenCalledWith('AAPL', 'tok', 'minute'))
 
     // Now select a different interval
-    fireEvent.click(screen.getByRole('button', { name: '15min' }))
+    fireEvent.click(screen.getByRole('button', { name: /hour/i }))
 
     await waitFor(() =>
-      expect(intradaySpy).toHaveBeenCalledWith('AAPL', 'tok', '15min')
+      expect(intradaySpy).toHaveBeenCalledWith('AAPL', 'tok', 'hour')
     )
   })
 

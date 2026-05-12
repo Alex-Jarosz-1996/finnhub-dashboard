@@ -41,10 +41,8 @@ var routeRules = []struct {
 	{"/api/options/", RouteRule{API: "massive", CacheTTL: 5 * time.Minute}},
 	{"/api/quote/", RouteRule{API: "finnhub", CacheTTL: 15 * time.Minute}},
 	{"/api/financials/", RouteRule{API: "finnhub", CacheTTL: 15 * time.Minute}},
-	// AI chat: no quota (Gemini free tier is generous), no cache (responses are dynamic)
-	{"/api/chat", RouteRule{API: "", CacheTTL: 0}},
-	// Auth: no quota, no cache
-	{"/api/auth/", RouteRule{API: "", CacheTTL: 0}},
+	{"/api/chat", RouteRule{API: "", CacheTTL: 0}},  // AI chat: no quota (Gemini free tier is generous), no cache (responses are dynamic)
+	{"/api/auth/", RouteRule{API: "", CacheTTL: 0}}, // Auth: no quota, no cache
 }
 
 // RuleFor returns the RouteRule for the given request path, and whether a

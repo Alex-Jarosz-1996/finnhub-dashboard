@@ -1,6 +1,10 @@
 from fastapi.testclient import TestClient
 
-from tests.conftest import MOCK_FMP_EOD, MOCK_FMP_EOD_FULL, MOCK_STOCKDATA_INTRADAY
+from tests.conftest import (
+    MOCK_FMP_EOD,
+    MOCK_FMP_EOD_FULL,
+    MOCK_INTRADAY_NORMALISED,
+)
 
 # --- GET /api/chart/eod/{symbol} ---
 
@@ -168,8 +172,8 @@ def test_get_intraday_chart_returns_200_with_correct_shape(
         "services.chart_service.get_intraday",
         return_value={
             "symbol": "AAPL",
-            "interval": "5min",
-            "data": MOCK_STOCKDATA_INTRADAY["data"],
+            "interval": "minute",
+            "data": MOCK_INTRADAY_NORMALISED,
         },
     )
 
@@ -178,7 +182,7 @@ def test_get_intraday_chart_returns_200_with_correct_shape(
     assert response.status_code == 200
     body = response.json()
     assert body["symbol"] == "AAPL"
-    assert body["interval"] == "5min"
+    assert body["interval"] == "minute"
     assert isinstance(body["data"], list)
 
 
@@ -190,18 +194,35 @@ def test_get_intraday_chart_returns_403_without_token(client: TestClient, mocker
     assert response.status_code == 403
 
 
-def test_get_intraday_chart_invalid_interval_falls_back_to_5min(
+def test_get_intraday_chart_invalid_interval_falls_back_to_minute(
     client: TestClient, auth_headers, mocker
 ):
     spy = mocker.patch(
         "services.chart_service.get_intraday",
         return_value={
             "symbol": "AAPL",
-            "interval": "5min",
-            "data": MOCK_STOCKDATA_INTRADAY["data"],
+            "interval": "minute",
+            "data": MOCK_INTRADAY_NORMALISED,
         },
     )
 
     client.get("/api/chart/intraday/AAPL?interval=bad_interval", headers=auth_headers)
 
-    spy.assert_called_once_with("AAPL", "5min")
+    spy.assert_called_once_with("AAPL", "minute")
+
+
+def test_get_intraday_chart_hour_interval_is_passed_through(
+    client: TestClient, auth_headers, mocker
+):
+    spy = mocker.patch(
+        "services.chart_service.get_intraday",
+        return_value={
+            "symbol": "AAPL",
+            "interval": "hour",
+            "data": MOCK_INTRADAY_NORMALISED,
+        },
+    )
+
+    client.get("/api/chart/intraday/AAPL?interval=hour", headers=auth_headers)
+
+    spy.assert_called_once_with("AAPL", "hour")

@@ -133,25 +133,50 @@ MOCK_FMP_EOD_FULL = [
     },
 ]
 
+MOCK_INTRADAY_NORMALISED = [
+    {
+        "date": "2024-01-03T10:00:00",
+        "open": 187.0,
+        "high": 188.5,
+        "low": 186.5,
+        "close": 188.0,
+        "volume": 1200000,
+    },
+    {
+        "date": "2024-01-03T10:05:00",
+        "open": 188.0,
+        "high": 189.0,
+        "low": 187.5,
+        "close": 188.5,
+        "volume": 900000,
+    },
+]
+
 MOCK_STOCKDATA_INTRADAY = {
     "data": [
         {
             "ticker": "AAPL",
             "date": "2024-01-03T10:00:00",
-            "open": 187.0,
-            "high": 188.5,
-            "low": 186.5,
-            "close": 188.0,
-            "volume": 1200000,
+            "data": {
+                "open": 187.0,
+                "high": 188.5,
+                "low": 186.5,
+                "close": 188.0,
+                "volume": 1200000,
+                "is_extended_hours": False,
+            },
         },
         {
             "ticker": "AAPL",
             "date": "2024-01-03T10:05:00",
-            "open": 188.0,
-            "high": 189.0,
-            "low": 187.5,
-            "close": 188.5,
-            "volume": 900000,
+            "data": {
+                "open": 188.0,
+                "high": 189.0,
+                "low": 187.5,
+                "close": 188.5,
+                "volume": 900000,
+                "is_extended_hours": False,
+            },
         },
     ]
 }

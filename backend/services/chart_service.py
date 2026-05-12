@@ -105,7 +105,7 @@ def get_eod_candle(symbol: str, rng: str = "1y") -> dict:
     return {"symbol": symbol.upper(), "range": rng, "data": data}
 
 
-def get_intraday(symbol: str, interval: str = "5min") -> dict:
+def get_intraday(symbol: str, interval: str = "minute") -> dict:
     """Fetch intraday OHLCV data from StockData and normalise to a flat list."""
     params = {
         "symbols": symbol.upper(),
@@ -136,14 +136,16 @@ def get_intraday(symbol: str, interval: str = "5min") -> dict:
     data = [
         {
             "date": row["date"],
-            "open": float(row.get("open", 0)),
-            "high": float(row.get("high", 0)),
-            "low": float(row.get("low", 0)),
-            "close": float(row.get("close", 0)),
-            "volume": int(row.get("volume", 0)),
+            "open": float(row["data"].get("open", 0)),
+            "high": float(row["data"].get("high", 0)),
+            "low": float(row["data"].get("low", 0)),
+            "close": float(row["data"].get("close", 0)),
+            "volume": int(row["data"].get("volume", 0)),
         }
         for row in rows
-        if row.get("ticker", "").upper() == symbol.upper() and "date" in row
+        if row.get("ticker", "").upper() == symbol.upper()
+        and "date" in row
+        and "data" in row
     ]
     data.sort(key=lambda r: r["date"])
     return {"symbol": symbol.upper(), "interval": interval, "data": data}

@@ -284,13 +284,23 @@ def test_get_intraday_normalises_response(respx_mock):
         return_value=httpx.Response(200, json=MOCK_STOCKDATA_INTRADAY)
     )
 
-    result = chart_service.get_intraday("aapl", "5min")
+    result = chart_service.get_intraday("aapl", "minute")
 
     assert result["symbol"] == "AAPL"
-    assert result["interval"] == "5min"
+    assert result["interval"] == "minute"
     assert len(result["data"]) == 2
     assert result["data"][0]["date"] == "2024-01-03T10:00:00"
     assert result["data"][0]["close"] == 188.0
+
+
+def test_get_intraday_hour_interval_passed_through(respx_mock):
+    respx_mock.get(chart_service._STOCKDATA_INTRADAY_URL).mock(
+        return_value=httpx.Response(200, json=MOCK_STOCKDATA_INTRADAY)
+    )
+
+    result = chart_service.get_intraday("AAPL", "hour")
+
+    assert result["interval"] == "hour"
 
 
 def test_get_intraday_uppercases_symbol(respx_mock):
@@ -310,11 +320,14 @@ def test_get_intraday_filters_to_requested_symbol(respx_mock):
             {
                 "ticker": "MSFT",
                 "date": "2024-01-03T10:00:00",
-                "open": 375.0,
-                "high": 376.0,
-                "low": 374.0,
-                "close": 375.5,
-                "volume": 500000,
+                "data": {
+                    "open": 375.0,
+                    "high": 376.0,
+                    "low": 374.0,
+                    "close": 375.5,
+                    "volume": 500000,
+                    "is_extended_hours": False,
+                },
             },
         ]
     }

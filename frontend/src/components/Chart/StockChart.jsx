@@ -14,19 +14,17 @@ import CandlestickChart from './CandlestickChart.jsx'
 import styles from './StockChart.module.css'
 
 const RANGES = ['1w', '1m', '3m', '6m', '1y', '2y', 'max']
-const INTERVALS = ['1min', '5min', '15min', '30min', '1hour']
+const INTERVALS = ['minute', 'hour']
 
-// Tooltip label — always shows full date/time
-function fmtDate(dateStr, mode) {
+function fmtTooltipLabel(dateStr, mode) {
   const d = new Date(dateStr)
   if (mode === 'eod')
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
   return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
 
-// X-axis tick label — format varies by range to match lightweight-charts density
+// Parse manually to avoid UTC-midnight shift in negative-offset timezones
 function fmtEodTick(dateStr, range) {
-  // Parse manually to avoid UTC-midnight shift in negative-offset timezones
   const [y, m, d] = dateStr.split('-').map(Number)
   const dt = new Date(y, m - 1, d)
   const month = dt.toLocaleDateString(undefined, { month: 'short' })
@@ -36,19 +34,18 @@ function fmtEodTick(dateStr, range) {
   return `${month} '${year}`
 }
 
-// Which data points get a tick on the X-axis, keyed by range
+// First trading day of each qualifying month
 function getEodTicks(data, range) {
   if (!data?.length) return []
   const dates = data.map((d) => d.date)
   if (range === '1w') return dates
   if (range === '1m') return dates.filter((_, i) => i % 5 === 0)
 
-  // Helper: first trading day of each qualifying month
   const firstOfPeriod = (monthTest) => {
     const seen = new Set()
     return dates.filter((dateStr) => {
       const [y, m] = dateStr.split('-').map(Number)
-      const monthIdx = m - 1 // 0-indexed
+      const monthIdx = m - 1
       if (!monthTest(monthIdx)) return false
       const key = `${y}-${monthIdx}`
       if (seen.has(key)) return false
@@ -57,10 +54,33 @@ function getEodTicks(data, range) {
     })
   }
 
-  if (range === '3m' || range === '6m') return firstOfPeriod(() => true)       // every month
-  if (range === '1y')                   return firstOfPeriod((m) => m % 2 === 0) // every 2 months
-  if (range === '2y')                   return firstOfPeriod((m) => m % 4 === 0) // every 4 months
-  return firstOfPeriod((m) => m === 0 || m === 6)                                // Jan + Jul (max)
+  if (range === '3m' || range === '6m') return firstOfPeriod(() => true)
+  if (range === '1y')                   return firstOfPeriod((m) => m % 2 === 0)
+  if (range === '2y')                   return firstOfPeriod((m) => m % 4 === 0)
+  return firstOfPeriod((m) => m === 0 || m === 6)
+}
+
+// First bar of each trading day (minute) or each month (hour)
+function getIntradayTicks(data, interval) {
+  if (!data?.length) return []
+  const seen = new Set()
+  return data.map((d) => d.date).filter((dateStr) => {
+    const dt = new Date(dateStr)
+    const key = interval === 'minute'
+      ? `${dt.getFullYear()}-${dt.getMonth()}-${dt.getDate()}`
+      : `${dt.getFullYear()}-${dt.getMonth()}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+}
+
+function fmtIntradayTick(dateStr, interval) {
+  const dt = new Date(dateStr)
+  if (interval === 'minute')
+    return dt.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })
+  const month = dt.toLocaleDateString(undefined, { month: 'short' })
+  return `${month} '${String(dt.getFullYear()).slice(2)}`
 }
 
 function fmtAge(ts) {
@@ -75,7 +95,7 @@ export default function StockChart({ symbol, token }) {
   const [mode, setMode] = useState('eod')
   const [chartStyle, setChartStyle] = useState('line')
   const [range, setRange] = useState('1y')
-  const [timeInterval, setTimeInterval] = useState('5min')
+  const [timeInterval, setTimeInterval] = useState('minute')
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -93,8 +113,7 @@ export default function StockChart({ symbol, token }) {
           : mode === 'eod'
           ? await getEODChart(symbol, token, range)
           : await getIntradayChart(symbol, token, timeInterval)
-      const sorted = [...result.data].sort((a, b) => a.date.localeCompare(b.date))
-      setData(sorted)
+      setData([...result.data].sort((a, b) => a.date.localeCompare(b.date)))
       setLastUpdated(Date.now())
     } catch (e) {
       setError(e.message)
@@ -110,7 +129,7 @@ export default function StockChart({ symbol, token }) {
     load()
   }, [load])
 
-  // Tick the clock every 30s so "X ago" label stays fresh
+  // Re-render every 30s so "X ago" label stays fresh
   useEffect(() => {
     const id = setInterval(() => setTick((n) => n + 1), 30_000)
     return () => clearInterval(id)
@@ -118,32 +137,55 @@ export default function StockChart({ symbol, token }) {
 
   const priceField = mode === 'eod' ? 'price' : 'close'
 
-  // Pre-compute which dates get tick labels for EOD mode
-  const eodTickSet = mode === 'eod' && data ? new Set(getEodTicks(data, range)) : null
+  const tickSet = data
+    ? new Set(mode === 'eod' ? getEodTicks(data, range) : getIntradayTicks(data, timeInterval))
+    : null
 
-  const priceDomain = (() => {
-    if (!data || data.length === 0) return ['auto', 'auto']
+  let priceDomain = ['auto', 'auto']
+  if (data?.length) {
     const vals = data.map((d) => d[priceField]).filter(Number.isFinite)
-    if (vals.length === 0) return ['auto', 'auto']
-    const min = Math.min(...vals)
-    const max = Math.max(...vals)
-    const pad = (max - min) * 0.05 || min * 0.01
-    return [min - pad, max + pad]
-  })()
+    if (vals.length) {
+      const min = Math.min(...vals)
+      const max = Math.max(...vals)
+      const pad = (max - min) * 0.05 || min * 0.01
+      priceDomain = [min - pad, max + pad]
+    }
+  }
 
-  // Volume bars occupy the bottom ~25% of the chart by making the axis domain
-  // 4x the max volume — bars only render in the lowest quarter of the space.
-  const volumeDomain = (() => {
-    if (!data || data.length === 0) return [0, 1]
+  // Volume bars occupy the bottom ~25% by making the domain 4x the max
+  let volumeDomain = [0, 1]
+  if (data?.length) {
     const maxVol = Math.max(...data.map((d) => d.volume).filter(Number.isFinite))
-    return [0, maxVol * 4]
-  })()
+    volumeDomain = [0, maxVol * 4]
+  }
 
   const handleModeSwitch = (next) => {
     if (next !== mode) {
       setMode(next)
       setChartStyle('line')
     }
+  }
+
+  const renderTick = ({ x, y, payload }) => {
+    if (tickSet && !tickSet.has(payload.value)) return <g />
+    const label = mode === 'eod'
+      ? fmtEodTick(payload.value, range)
+      : fmtIntradayTick(payload.value, timeInterval)
+    const rotate = mode === 'intraday'
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0} y={0}
+          dy={rotate ? 8 : 12}
+          textAnchor={rotate ? 'end' : 'middle'}
+          transform={rotate ? 'rotate(-35)' : undefined}
+          fontSize={11}
+          fill="var(--text-secondary)"
+        >
+          {label}
+        </text>
+      </g>
+    )
   }
 
   return (
@@ -164,31 +206,30 @@ export default function StockChart({ symbol, token }) {
           </div>
 
           {mode === 'eod' && (
-            <div className={styles.toggleGroup}>
-              {['line', 'candlestick'].map((s) => (
-                <button
-                  key={s}
-                  className={`${styles.toggleBtn} ${chartStyle === s ? styles.toggleBtnActive : ''}`}
-                  onClick={() => setChartStyle(s)}
-                >
-                  {s === 'line' ? 'Line' : 'Candle'}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {mode === 'eod' && (
-            <div className={styles.toggleGroup}>
-              {RANGES.map((r) => (
-                <button
-                  key={r}
-                  className={`${styles.toggleBtn} ${range === r ? styles.toggleBtnActive : ''}`}
-                  onClick={() => setRange(r)}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
+            <>
+              <div className={styles.toggleGroup}>
+                {['line', 'candlestick'].map((s) => (
+                  <button
+                    key={s}
+                    className={`${styles.toggleBtn} ${chartStyle === s ? styles.toggleBtnActive : ''}`}
+                    onClick={() => setChartStyle(s)}
+                  >
+                    {s === 'line' ? 'Line' : 'Candle'}
+                  </button>
+                ))}
+              </div>
+              <div className={styles.toggleGroup}>
+                {RANGES.map((r) => (
+                  <button
+                    key={r}
+                    className={`${styles.toggleBtn} ${range === r ? styles.toggleBtnActive : ''}`}
+                    onClick={() => setRange(r)}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </>
           )}
 
           {mode === 'intraday' && (
@@ -199,7 +240,7 @@ export default function StockChart({ symbol, token }) {
                   className={`${styles.toggleBtn} ${timeInterval === iv ? styles.toggleBtnActive : ''}`}
                   onClick={() => setTimeInterval(iv)}
                 >
-                  {iv}
+                  {iv === 'minute' ? 'Minute' : 'Hour'}
                 </button>
               ))}
             </div>
@@ -226,89 +267,48 @@ export default function StockChart({ symbol, token }) {
         <div className={`${styles.center} ${styles.error}`}>{error}</div>
       )}
 
-      {!loading && !error && data && data.length > 0 && (
-        <div className={styles.chartArea}>
-          {mode === 'eod' && chartStyle === 'candlestick' ? (
-            <CandlestickChart data={data} />
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis
-                  dataKey="date"
-                  interval={0}
-                  tickLine={false}
-                  tick={(props) => {
-                    const { x, y, payload } = props
-                    if (eodTickSet && !eodTickSet.has(payload.value)) return <g />
-                    const label = eodTickSet
-                      ? fmtEodTick(payload.value, range)
-                      : fmtDate(payload.value, mode)
-                    return (
-                      <g transform={`translate(${x},${y})`}>
-                        <text
-                          x={0} y={0} dy={12}
-                          textAnchor="middle"
-                          fontSize={11}
-                          fill="var(--text-secondary)"
-                        >
-                          {label}
-                        </text>
-                      </g>
-                    )
-                  }}
-                />
-                <YAxis
-                  yAxisId="price"
-                  domain={priceDomain}
-                  tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
-                  tickLine={false}
-                  tickFormatter={(v) => `$${v.toFixed(0)}`}
-                  width={60}
-                />
-                <YAxis
-                  yAxisId="volume"
-                  orientation="right"
-                  hide
-                  domain={volumeDomain}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: 'var(--bg-card)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
-                  formatter={(value, name) =>
-                    name === 'volume'
-                      ? [value.toLocaleString(), 'Volume']
-                      : [`$${Number(value).toFixed(2)}`, 'Price']
-                  }
-                  labelFormatter={(d) => fmtDate(d, mode)}
-                />
-                <Bar
-                  yAxisId="volume"
-                  dataKey="volume"
-                  fill="var(--text-secondary)"
-                  opacity={0.3}
-                  isAnimationActive={false}
-                />
-                <Line
-                  yAxisId="price"
-                  type="monotone"
-                  dataKey={priceField}
-                  stroke="var(--accent)"
-                  strokeWidth={2}
-                  dot={false}
-                  isAnimationActive={false}
-                />
-              </ComposedChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      )}
-      {!loading && !error && (!data || data.length === 0) && (
-        <div className={styles.center}>No chart data available.</div>
+      {!loading && !error && (
+        data?.length > 0 ? (
+          <div className={styles.chartArea}>
+            {mode === 'eod' && chartStyle === 'candlestick' ? (
+              <CandlestickChart data={data} />
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={data} margin={{ top: 4, right: 16, left: 0, bottom: mode === 'intraday' ? 30 : 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="date" interval={0} tickLine={false} tick={renderTick} />
+                  <YAxis
+                    yAxisId="price"
+                    domain={priceDomain}
+                    tick={{ fontSize: 11, fill: 'var(--text-secondary)' }}
+                    tickLine={false}
+                    tickFormatter={(v) => `$${v.toFixed(0)}`}
+                    width={60}
+                  />
+                  <YAxis yAxisId="volume" orientation="right" hide domain={volumeDomain} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'var(--bg-card)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 8,
+                      fontSize: 12,
+                    }}
+                    formatter={(value, name) =>
+                      name === 'volume'
+                        ? [value.toLocaleString(), 'Volume']
+                        : [`$${Number(value).toFixed(2)}`, 'Price']
+                    }
+                    labelFormatter={(d) => fmtTooltipLabel(d, mode)}
+                  />
+                  <Bar yAxisId="volume" dataKey="volume" fill="var(--text-secondary)" opacity={0.3} isAnimationActive={false} />
+                  <Line yAxisId="price" type="monotone" dataKey={priceField} stroke="var(--accent)" strokeWidth={2} dot={false} isAnimationActive={false} />
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        ) : (
+          <div className={styles.center}>No chart data available.</div>
+        )
       )}
     </div>
   )

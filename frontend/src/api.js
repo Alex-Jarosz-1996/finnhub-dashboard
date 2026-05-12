@@ -37,7 +37,7 @@ export const getCandlestickChart = (symbol, token, range = '1y') =>
     headers: authHeaders(token),
   }).then(handle)
 
-export const getIntradayChart = (symbol, token, interval = '5min') =>
+export const getIntradayChart = (symbol, token, interval = 'minute') =>
   fetch(`${BASE}/chart/intraday/${symbol.toUpperCase()}?interval=${interval}`, {
     headers: authHeaders(token),
   }).then(handle)

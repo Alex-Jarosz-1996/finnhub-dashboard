@@ -28,18 +28,23 @@
   padding: 6px 14px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
 }
 
+.themeBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
 .logoutBtn {
   padding: 6px 14px;
   background: none;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-muted);
   cursor: pointer;
   font-size: 13px;
@@ -60,12 +65,17 @@
 .tab {
   padding: 8px 20px;
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--text-secondary);
   cursor: pointer;
   font-size: 14px;
   font-weight: 600;
+}
+
+.tab:hover:not(.tabActive) {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
 }
 
 .tabActive {

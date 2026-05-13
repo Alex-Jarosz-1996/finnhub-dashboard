@@ -9,3 +9,4 @@ class QuoteResponse(BaseModel):
     high: Optional[float]
     low: Optional[float]
     open: Optional[float]
+    prev_close: Optional[float]

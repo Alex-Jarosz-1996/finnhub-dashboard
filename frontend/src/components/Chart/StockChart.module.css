@@ -51,6 +51,11 @@
   border-right: 1px solid var(--border);
 }
 
+.toggleBtn:not(.toggleBtnActive):hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .toggleBtnActive {
   background: var(--accent);
   color: #fff;
@@ -62,9 +67,14 @@
   font-weight: 600;
   background: transparent;
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   cursor: pointer;
+}
+
+.refreshBtn:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
 }
 
 .refreshBtn:disabled {
@@ -92,5 +102,5 @@
 }
 
 .error {
-  color: var(--error, #e55);
+  color: var(--error-text);
 }

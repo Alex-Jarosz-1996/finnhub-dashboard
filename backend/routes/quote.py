@@ -43,4 +43,5 @@ def get_quote(
         high=data.get("h"),
         low=data.get("l"),
         open=data.get("o"),
+        prev_close=data.get("pc"),
     )

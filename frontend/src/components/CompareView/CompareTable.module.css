@@ -12,11 +12,16 @@
   padding: 6px 12px;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-secondary);
   font-size: 12px;
   cursor: pointer;
   font-weight: 600;
+}
+
+.colBtn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
 }
 
 .panel {
@@ -95,6 +100,10 @@
   font-size: 16px;
   line-height: 1;
   padding: 0 4px;
+}
+
+.removeBtn:hover {
+  color: var(--error-text);
 }
 
 .loading {

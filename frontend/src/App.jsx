@@ -11,6 +11,7 @@ import CompareTable from './components/CompareView/CompareTable.jsx'
 import StockChart from './components/Chart/StockChart.jsx'
 import OptionsChain from './components/OptionsChain/OptionsChain.jsx'
 import LoginPage from './pages/LoginPage.jsx'
+import ResearchPanel from './components/Research/ResearchPanel.jsx'
 
 const MAX_COMPARE = 10
 
@@ -132,6 +133,7 @@ export default function App() {
   if (!token) return <LoginPage onLogin={handleLogin} sessionExpired={sessionExpired} />
 
   return (
+    <>
     <div className={styles.app}>
       <div className={styles.header}>
         <div className={styles.title}>Finnhub Dashboard</div>
@@ -208,5 +210,7 @@ export default function App() {
         </div>
       )}
     </div>
+    <ResearchPanel token={token} />
+    </>
   )
 }

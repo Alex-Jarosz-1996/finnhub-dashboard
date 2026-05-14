@@ -9,6 +9,7 @@ select = [
 ]
 ignore = [
     "B008", # Depends() in argument defaults is the standard FastAPI pattern
+    "E501", # ruff-format handles line length; long strings can't be auto-wrapped
 ]
 
 [format]

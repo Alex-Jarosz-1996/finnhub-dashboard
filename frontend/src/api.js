@@ -42,6 +42,13 @@ export const getIntradayChart = (symbol, token, interval = 'minute') =>
     headers: authHeaders(token),
   }).then(handle)
 
+export const sendChatMessage = (message, token) =>
+  fetch(`${BASE}/chat`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders(token) },
+    body: JSON.stringify({ message }),
+  }).then(handle)
+
 export const fetchOptionsChain = (symbol, token, strikePrice = null) => {
   const url = strikePrice
     ? `${BASE}/options/${symbol.toUpperCase()}?strike_price=${strikePrice}`

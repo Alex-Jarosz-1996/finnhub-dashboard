@@ -6,9 +6,11 @@ from slowapi.errors import RateLimitExceeded
 
 from core.limiter import limiter
 from middleware.cors import register_cors
+from routes.ai import router as ai_router
 from routes.auth import router as auth_router
 from routes.chart import router as chart_router
 from routes.financials import router as financials_router
+from routes.mcp import router as mcp_router
 from routes.options import router as options_router
 from routes.quote import router as quote_router
 
@@ -28,6 +30,8 @@ app.include_router(quote_router)
 app.include_router(financials_router)
 app.include_router(chart_router)
 app.include_router(options_router)
+app.include_router(mcp_router)
+app.include_router(ai_router)
 
 
 @app.get("/health", status_code=status.HTTP_200_OK)
